@@ -1,0 +1,64 @@
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.card {
+  width: min(560px, 100%);
+  padding: 36px;
+  border-radius: 32px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  box-shadow: var(--shadow);
+}
+
+.kicker {
+  margin: 0 0 12px;
+  color: var(--accent-2);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.8rem;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2.5rem, 6vw, 4rem);
+  line-height: 1;
+}
+
+.copy {
+  color: var(--muted);
+  margin: 16px 0 0;
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.input {
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(2, 6, 23, 0.55);
+  color: var(--text);
+}
+
+.button {
+  padding: 14px 18px;
+  border: 0;
+  border-radius: 16px;
+  font-weight: 800;
+  color: #020617;
+  background: linear-gradient(135deg, #38bdf8, #22c55e);
+  cursor: pointer;
+}
+
+.link {
+  display: inline-block;
+  margin-top: 18px;
+  color: var(--muted);
+}
