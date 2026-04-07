@@ -9,11 +9,14 @@ const MIN_FACE_WIDTH_RATIO = 0.26;
 const MIN_FACE_AREA_RATIO = 0.09;
 const CENTER_MARGIN_X = 0.13;
 const CENTER_MARGIN_Y = 0.13;
-const UP_DOWN_PITCH_MOTION_DELTA = 0.022;
+const UP_DOWN_PITCH_MIN_DELTA = 0.05;
+const UP_DOWN_PITCH_MAX_DELTA = 0.08;
+const LEFT_RIGHT_YAW_MIN_THRESHOLD = 0.085;
+const LEFT_RIGHT_YAW_MAX_THRESHOLD = 0.18;
 const poseMessages = {
   front: 'Look straight at the camera',
-  left: 'Turn your head to the left',
-  right: 'Turn your head to the right',
+  left: 'Turn your head slightly to the left',
+  right: 'Turn your head slightly to the right',
   up: 'Tilt your head up',
   down: 'Tilt your head down',
 };
@@ -316,19 +319,41 @@ export default function CameraView({ studentCode, studentName, onSuccess }) {
                   const previousBaseline = neutralPitchRef.current;
                   neutralPitchRef.current = previousBaseline == null ? pitch : previousBaseline * 0.7 + pitch * 0.3;
                   nextPassing = true;
-                } else if (pose === 'left' && yaw < -0.15) {
-                  nextPassing = true;
-                } else if (pose === 'right' && yaw > 0.15) {
-                  nextPassing = true;
-                } else if (pose === 'up' || pose === 'down') {
-                  const pitchMotion = Math.abs(pitch - poseStartPitchRef.current);
-                  if (pitchMotion > UP_DOWN_PITCH_MOTION_DELTA) {
+                  // Video preview is mirrored, so yaw sign is inverted relative to user-facing directions.
+                } else if (pose === 'left') {
+                  if (yaw > LEFT_RIGHT_YAW_MAX_THRESHOLD) {
+                    nextMessage = 'Too far left. Turn slightly left only';
+                  } else if (yaw > LEFT_RIGHT_YAW_MIN_THRESHOLD) {
                     nextPassing = true;
                   } else {
                     nextMessage = poseMessages[pose];
                   }
-                } else if (neutralPitchRef.current != null && Math.abs(pitch - neutralPitchRef.current) > UP_DOWN_PITCH_MOTION_DELTA) {
-                  nextPassing = true;
+                } else if (pose === 'right') {
+                  if (yaw < -LEFT_RIGHT_YAW_MAX_THRESHOLD) {
+                    nextMessage = 'Too far right. Turn slightly right only';
+                  } else if (yaw < -LEFT_RIGHT_YAW_MIN_THRESHOLD) {
+                    nextPassing = true;
+                  } else {
+                    nextMessage = poseMessages[pose];
+                  }
+                } else if (pose === 'up') {
+                  const pitchDelta = pitch - poseStartPitchRef.current;
+                  if (pitchDelta < -UP_DOWN_PITCH_MAX_DELTA) {
+                    nextMessage = 'Too far up. Tilt slightly up only';
+                  } else if (pitchDelta < -UP_DOWN_PITCH_MIN_DELTA) {
+                    nextPassing = true;
+                  } else {
+                    nextMessage = poseMessages[pose];
+                  }
+                } else if (pose === 'down') {
+                  const pitchDelta = pitch - poseStartPitchRef.current;
+                  if (pitchDelta > UP_DOWN_PITCH_MAX_DELTA) {
+                    nextMessage = 'Too far down. Tilt slightly down only';
+                  } else if (pitchDelta > UP_DOWN_PITCH_MIN_DELTA) {
+                    nextPassing = true;
+                  } else {
+                    nextMessage = poseMessages[pose];
+                  }
                 } else {
                   nextMessage = poseMessages[pose];
                 }

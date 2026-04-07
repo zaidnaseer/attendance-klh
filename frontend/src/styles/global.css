@@ -18,7 +18,9 @@
   box-sizing: border-box;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   min-height: 100%;
   margin: 0;
 }
@@ -36,6 +38,7 @@ a {
   color: inherit;
 }
 
-button, input {
+button,
+input {
   font: inherit;
 }

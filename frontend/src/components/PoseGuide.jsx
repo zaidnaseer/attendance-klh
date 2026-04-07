@@ -2,8 +2,8 @@ import styles from './PoseGuide.module.css';
 
 const labels = {
   front: 'Look Straight',
-  left: 'Look Left',
-  right: 'Look Right',
+  left: 'Look Slightly Left',
+  right: 'Look Slightly Right',
   up: 'Tilt Up',
   down: 'Tilt Down',
 };
