@@ -9,8 +9,8 @@ const MIN_FACE_WIDTH_RATIO = 0.26;
 const MIN_FACE_AREA_RATIO = 0.09;
 const CENTER_MARGIN_X = 0.13;
 const CENTER_MARGIN_Y = 0.13;
-const UP_DOWN_PITCH_MIN_DELTA = 0.05;
-const UP_DOWN_PITCH_MAX_DELTA = 0.08;
+const UP_DOWN_PITCH_MIN_DELTA = 0.07;
+const UP_DOWN_PITCH_MAX_DELTA = 0.34;
 const LEFT_RIGHT_YAW_MIN_THRESHOLD = 0.085;
 const LEFT_RIGHT_YAW_MAX_THRESHOLD = 0.18;
 const poseMessages = {
@@ -145,6 +145,7 @@ export default function CameraView({ studentCode, studentName, onSuccess }) {
   const lastFrameTimeRef = useRef(0);
   const neutralPitchRef = useRef(null);
   const poseStartPitchRef = useRef(null);
+  const smoothedPitchRef = useRef(null);
   const activePoseRef = useRef(POSES[0]);
   const currentPoseIndexRef = useRef(0);
   const capturedBlobsRef = useRef(new Array(POSES.length).fill(null));
@@ -165,6 +166,7 @@ export default function CameraView({ studentCode, studentName, onSuccess }) {
     currentPoseIndexRef.current = poseIndex;
     activePoseRef.current = POSES[poseIndex] || POSES[0];
     poseStartPitchRef.current = null;
+    smoothedPitchRef.current = null;
     if (poseIndex === 0) {
       neutralPitchRef.current = null;
     }
@@ -310,7 +312,10 @@ export default function CameraView({ studentCode, studentName, onSuccess }) {
                 const eyeMidX = (keypoints[0].x + keypoints[1].x) / 2;
                 const eyeMidY = (keypoints[0].y + keypoints[1].y) / 2;
                 const yaw = (keypoints[2].x - eyeMidX) / (box.width / video.videoWidth);
-                const pitch = (keypoints[2].y - eyeMidY) / (box.height / video.videoHeight);
+                const rawPitch = (keypoints[2].y - eyeMidY) / (box.height / video.videoHeight);
+                const previousPitch = smoothedPitchRef.current;
+                const pitch = previousPitch == null ? rawPitch : previousPitch * 0.65 + rawPitch * 0.35;
+                smoothedPitchRef.current = pitch;
                 if (poseStartPitchRef.current == null) {
                   poseStartPitchRef.current = pitch;
                 }
@@ -337,22 +342,24 @@ export default function CameraView({ studentCode, studentName, onSuccess }) {
                     nextMessage = poseMessages[pose];
                   }
                 } else if (pose === 'up') {
-                  const pitchDelta = pitch - poseStartPitchRef.current;
-                  if (pitchDelta < -UP_DOWN_PITCH_MAX_DELTA) {
-                    nextMessage = 'Too far up. Tilt slightly up only';
-                  } else if (pitchDelta < -UP_DOWN_PITCH_MIN_DELTA) {
-                    nextPassing = true;
-                  } else {
+                  const baselinePitch = neutralPitchRef.current ?? poseStartPitchRef.current ?? pitch;
+                  const pitchDelta = pitch - baselinePitch;
+                  if (pitchDelta > -UP_DOWN_PITCH_MIN_DELTA) {
                     nextMessage = poseMessages[pose];
+                  } else if (pitchDelta < -UP_DOWN_PITCH_MAX_DELTA) {
+                    nextMessage = 'Too far up. Tilt slightly up only';
+                  } else {
+                    nextPassing = true;
                   }
                 } else if (pose === 'down') {
-                  const pitchDelta = pitch - poseStartPitchRef.current;
-                  if (pitchDelta > UP_DOWN_PITCH_MAX_DELTA) {
-                    nextMessage = 'Too far down. Tilt slightly down only';
-                  } else if (pitchDelta > UP_DOWN_PITCH_MIN_DELTA) {
-                    nextPassing = true;
-                  } else {
+                  const baselinePitch = neutralPitchRef.current ?? poseStartPitchRef.current ?? pitch;
+                  const pitchDelta = pitch - baselinePitch;
+                  if (pitchDelta < UP_DOWN_PITCH_MIN_DELTA) {
                     nextMessage = poseMessages[pose];
+                  } else if (pitchDelta > UP_DOWN_PITCH_MAX_DELTA) {
+                    nextMessage = 'Too far down. Tilt slightly down only';
+                  } else {
+                    nextPassing = true;
                   }
                 } else {
                   nextMessage = poseMessages[pose];
