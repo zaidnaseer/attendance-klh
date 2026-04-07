@@ -55,13 +55,16 @@ function drawOverlay(ctx, video, detection, passing, steadyTimer, flashUntil, no
   }
 
   const box = detection.boundingBox;
-  const scaleX = canvas.width / video.videoWidth;
-  const scaleY = canvas.height / video.videoHeight;
-  const mirroredX = canvas.width - (box.originX + box.width) * scaleX;
-  const x = mirroredX;
-  const y = box.originY * scaleY;
-  const width = box.width * scaleX;
-  const height = box.height * scaleY;
+  // Match CSS object-fit: cover projection and horizontal mirroring.
+  const scale = Math.max(canvas.width / video.videoWidth, canvas.height / video.videoHeight);
+  const projectedWidth = video.videoWidth * scale;
+  const projectedHeight = video.videoHeight * scale;
+  const offsetX = (canvas.width - projectedWidth) / 2;
+  const offsetY = (canvas.height - projectedHeight) / 2;
+  const x = offsetX + (video.videoWidth - (box.originX + box.width)) * scale;
+  const y = offsetY + box.originY * scale;
+  const width = box.width * scale;
+  const height = box.height * scale;
   const color = passing ? '#22c55e' : '#ef4444';
   const line = 3;
   const corner = 20;
