@@ -79,3 +79,49 @@
   border: 1px solid rgba(148, 163, 184, 0.28);
   color: var(--text);
 }
+
+.previewStrip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.previewCard {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.previewFrame {
+  aspect-ratio: 1;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(15, 23, 42, 0.5);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.previewImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.previewPlaceholder {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.previewLabel {
+  text-align: center;
+  text-transform: capitalize;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+@media (max-width: 720px) {
+  .previewStrip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

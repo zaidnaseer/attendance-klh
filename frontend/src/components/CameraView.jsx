@@ -152,6 +152,7 @@ export default function CameraView({ studentCode, studentName, onSuccess }) {
   const flashUntilRef = useRef(0);
   const submittingRef = useRef(false);
   const retryPoseIndexRef = useRef(0);
+  const previewUrlsRef = useRef(new Set());
   const { detector, ready, error, retryDetector } = useFaceDetector();
   const [displayPoseIndex, setDisplayPoseIndex] = useState(0);
   const [statusMessage, setStatusMessage] = useState('Starting camera');
@@ -161,6 +162,7 @@ export default function CameraView({ studentCode, studentName, onSuccess }) {
   const [success, setSuccess] = useState(null);
   const [canRetrySubmit, setCanRetrySubmit] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
+  const [capturedPreviews, setCapturedPreviews] = useState(new Array(POSES.length).fill(null));
 
   const resetForPose = useCallback((poseIndex) => {
     currentPoseIndexRef.current = poseIndex;
@@ -173,6 +175,13 @@ export default function CameraView({ studentCode, studentName, onSuccess }) {
     steadyTimerRef.current = 0;
     lastFrameTimeRef.current = performance.now();
     setDisplayPoseIndex(poseIndex);
+    setCapturedPreviews((previous) => previous.map((value, index) => {
+      if (index >= poseIndex && value) {
+        URL.revokeObjectURL(value);
+        previewUrlsRef.current.delete(value);
+      }
+      return index < poseIndex ? value : null;
+    }));
   }, []);
 
   const stopLoop = useCallback(() => {
@@ -388,6 +397,17 @@ export default function CameraView({ studentCode, studentName, onSuccess }) {
       if (primary && nextPassing && steadyTimerRef.current >= 1500) {
         const blob = await capturePose(video, primary.boundingBox);
         capturedBlobsRef.current[poseIndex] = blob;
+        const previewUrl = URL.createObjectURL(blob);
+        previewUrlsRef.current.add(previewUrl);
+        setCapturedPreviews((previous) => {
+          if (previous[poseIndex]) {
+            URL.revokeObjectURL(previous[poseIndex]);
+            previewUrlsRef.current.delete(previous[poseIndex]);
+          }
+          const next = previous.slice();
+          next[poseIndex] = previewUrl;
+          return next;
+        });
         flashUntilRef.current = now + 200;
         currentPoseIndexRef.current += 1;
         steadyTimerRef.current = 0;
@@ -488,6 +508,13 @@ export default function CameraView({ studentCode, studentName, onSuccess }) {
     }
   }, [cameraReady, ready, error]);
 
+  useEffect(() => () => {
+    previewUrlsRef.current.forEach((preview) => {
+      URL.revokeObjectURL(preview);
+    });
+    previewUrlsRef.current.clear();
+  }, []);
+
   useEffect(() => {
     if (cameraReady && ready && !error) {
       setStatusMessage(getPoseLabel(POSES[currentPoseIndexRef.current]));
@@ -555,6 +582,20 @@ export default function CameraView({ studentCode, studentName, onSuccess }) {
           </button>
         </div>
       ) : null}
+      <section className={styles.previewStrip} aria-label="Enrollment captures">
+        {POSES.map((pose, index) => (
+          <figure key={pose} className={styles.previewCard}>
+            <div className={styles.previewFrame}>
+              {capturedPreviews[index] ? (
+                <img src={capturedPreviews[index]} alt={`${pose} capture`} className={styles.previewImage} />
+              ) : (
+                <span className={styles.previewPlaceholder}>Waiting</span>
+              )}
+            </div>
+            <figcaption className={styles.previewLabel}>{pose}</figcaption>
+          </figure>
+        ))}
+      </section>
     </div>
   );
 }
