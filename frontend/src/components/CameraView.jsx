@@ -122,11 +122,12 @@ function sampleBrightness(video, box) {
 }
 
 async function capturePose(video, box) {
-  const padding = 1.4;
+  const horizontalPadding = 1.8;
+  const verticalPadding = 2.1;
   const centerX = box.originX + box.width / 2;
-  const centerY = box.originY + box.height / 2;
-  const cropWidth = clamp(box.width * padding, 1, video.videoWidth);
-  const cropHeight = clamp(box.height * padding, 1, video.videoHeight);
+  const centerY = box.originY + box.height * 0.52;
+  const cropWidth = clamp(box.width * horizontalPadding, 1, video.videoWidth);
+  const cropHeight = clamp(box.height * verticalPadding, 1, video.videoHeight);
   const sourceX = clamp(centerX - cropWidth / 2, 0, Math.max(1, video.videoWidth - cropWidth));
   const sourceY = clamp(centerY - cropHeight / 2, 0, Math.max(1, video.videoHeight - cropHeight));
   const canvas = createOffscreenCanvas(Math.round(cropWidth), Math.round(cropHeight));
