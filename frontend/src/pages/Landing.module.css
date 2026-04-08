@@ -33,6 +33,28 @@ h1 {
   margin: 16px 0 0;
 }
 
+.modeSwitch {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+.modeButton {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(2, 6, 23, 0.45);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modeButtonActive {
+  border-color: rgba(56, 189, 248, 0.7);
+  background: rgba(56, 189, 248, 0.14);
+}
+
 .form {
   display: grid;
   gap: 12px;

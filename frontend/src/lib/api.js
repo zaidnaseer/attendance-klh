@@ -46,3 +46,10 @@ export function enrollStudent(studentCode, formData) {
     body: formData,
   });
 }
+
+export function verifyStudent(studentCode, formData) {
+  return request(`/api/verify/${encodeURIComponent(studentCode)}`, {
+    method: 'POST',
+    body: formData,
+  });
+}

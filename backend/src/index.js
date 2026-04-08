@@ -5,6 +5,7 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const studentsRouter = require('./routes/students');
 const enrollRouter = require('./routes/enroll');
+const verifyRouter = require('./routes/verify');
 const { migrate } = require('./db/migrate');
 
 const app = express();
@@ -20,7 +21,15 @@ const enrollLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const verifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.use('/api/enroll', enrollLimiter, enrollRouter);
+app.use('/api/verify', verifyLimiter, verifyRouter);
 app.use('/api/students', studentsRouter);
 
 app.get('/health', (_req, res) => {

@@ -93,3 +93,39 @@ async def analyze(image: UploadFile = File(...), pose: str = Form(...)):
         raise
     except Exception as error:
         raise HTTPException(status_code=500, detail=str(error)) from error
+
+
+@app.post('/verify')
+async def verify(image: UploadFile = File(...)):
+    try:
+        if image.content_type not in {'image/jpeg', 'image/png'}:
+            raise HTTPException(status_code=400, detail='Only JPEG or PNG images are accepted')
+
+        image_bytes = await image.read()
+        if len(image_bytes) > MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail='Image exceeds 2MB')
+
+        np_buffer = np.frombuffer(image_bytes, dtype=np.uint8)
+        decoded = cv2.imdecode(np_buffer, cv2.IMREAD_COLOR)
+        if decoded is None:
+            raise HTTPException(status_code=400, detail='Invalid image data')
+
+        spoof_score = float(state.antispoof.score(decoded))
+        is_real = spoof_score < 0.6
+
+        detection = state.embeddings.detect_and_extract(decoded)
+        embedding = detection.get('embedding') if is_real else None
+
+        return JSONResponse({
+            'detector': 'retinaface',
+            'recognizer': 'arcface',
+            'face_detected': bool(detection.get('face_detected')),
+            'face_count': int(detection.get('face_count', 0)),
+            'spoof_score': spoof_score,
+            'is_real': is_real,
+            'embedding': embedding,
+        })
+    except HTTPException:
+        raise
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=str(error)) from error

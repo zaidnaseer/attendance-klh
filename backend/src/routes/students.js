@@ -48,9 +48,6 @@ router.get('/:studentCode', async (req, res) => {
     if (!rows[0]) {
       return res.status(404).json({ code: 'STUDENT_NOT_FOUND', message: 'Student not found' });
     }
-    if (rows[0].enrolled) {
-      return res.status(409).json({ code: 'ALREADY_ENROLLED', message: 'Already enrolled. Nothing to do.' });
-    }
     return res.json(rows[0]);
   } catch (error) {
     console.error(error);

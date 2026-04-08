@@ -19,4 +19,6 @@ const enrollmentUpload = upload.fields([
   { name: 'down', maxCount: 1 },
 ]);
 
-module.exports = { enrollmentUpload };
+const verifyUpload = upload.single('image');
+
+module.exports = { enrollmentUpload, verifyUpload };
