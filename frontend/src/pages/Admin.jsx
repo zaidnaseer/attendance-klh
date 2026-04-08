@@ -3,6 +3,8 @@ import {
   createCourse,
   createFaculty,
   createStudent,
+  deleteCourse,
+  deleteFaculty,
   deleteStudent,
   getAdminOverview,
   mapFacultyToCourse,
@@ -162,6 +164,34 @@ export default function Admin() {
     }
   };
 
+  const handleDeleteFaculty = async (facultyCode) => {
+    if (!window.confirm('Delete this faculty?')) {
+      return;
+    }
+
+    try {
+      await deleteFaculty(facultyCode);
+      setToast({ type: 'success', title: 'Faculty deleted', message: facultyCode });
+      await loadOverview();
+    } catch (error) {
+      setToast({ type: 'error', title: 'Delete failed', message: error.message });
+    }
+  };
+
+  const handleDeleteCourse = async (courseCode) => {
+    if (!window.confirm('Delete this course?')) {
+      return;
+    }
+
+    try {
+      await deleteCourse(courseCode);
+      setToast({ type: 'success', title: 'Course deleted', message: courseCode });
+      await loadOverview();
+    } catch (error) {
+      setToast({ type: 'error', title: 'Delete failed', message: error.message });
+    }
+  };
+
   const handleRemoveFacultyMapping = async (mappingId) => {
     try {
       await unmapFacultyCourse(mappingId);
@@ -202,7 +232,11 @@ export default function Admin() {
           )}
 
           {activeTab === 'faculty' && (
-            <FacultyTab overview={overview} onAddFaculty={() => openModal('faculty')} />
+            <FacultyTab
+              overview={overview}
+              onAddFaculty={() => openModal('faculty')}
+              onDeleteFaculty={handleDeleteFaculty}
+            />
           )}
 
           {activeTab === 'students' && (
@@ -214,7 +248,11 @@ export default function Admin() {
           )}
 
           {activeTab === 'courses' && (
-            <CoursesTab overview={overview} onAddCourse={() => openModal('course')} />
+            <CoursesTab
+              overview={overview}
+              onAddCourse={() => openModal('course')}
+              onDeleteCourse={handleDeleteCourse}
+            />
           )}
 
           {activeTab === 'mappings' && (

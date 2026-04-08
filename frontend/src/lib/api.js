@@ -65,10 +65,22 @@ export function createFaculty(payload) {
   });
 }
 
+export function deleteFaculty(facultyCode) {
+  return request(`/api/admin/faculties/${encodeURIComponent(facultyCode)}`, {
+    method: 'DELETE',
+  });
+}
+
 export function createCourse(payload) {
   return request('/api/admin/courses', {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+}
+
+export function deleteCourse(courseCode) {
+  return request(`/api/admin/courses/${encodeURIComponent(courseCode)}`, {
+    method: 'DELETE',
   });
 }
 

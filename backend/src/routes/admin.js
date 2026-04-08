@@ -67,6 +67,20 @@ router.post('/faculties', async (req, res) => {
     }
 });
 
+router.delete('/faculties/:facultyCode', async (req, res) => {
+    try {
+        const { facultyCode } = req.params;
+        const result = await pool.query('DELETE FROM faculties WHERE faculty_code = $1 RETURNING id', [facultyCode]);
+        if (!result.rows[0]) {
+            return res.status(404).json({ code: 'FACULTY_NOT_FOUND', message: 'Faculty not found' });
+        }
+        return res.json({ code: 'SUCCESS', message: 'Faculty deleted' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Unexpected server error' });
+    }
+});
+
 router.post('/courses', async (req, res) => {
     try {
         const { name, courseCode } = req.body || {};
@@ -87,6 +101,20 @@ router.post('/courses', async (req, res) => {
         if (error.code === '23505') {
             return res.status(409).json({ code: 'COURSE_CODE_EXISTS', message: 'Course code already exists' });
         }
+        console.error(error);
+        return res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Unexpected server error' });
+    }
+});
+
+router.delete('/courses/:courseCode', async (req, res) => {
+    try {
+        const { courseCode } = req.params;
+        const result = await pool.query('DELETE FROM courses WHERE course_code = $1 RETURNING id', [courseCode]);
+        if (!result.rows[0]) {
+            return res.status(404).json({ code: 'COURSE_NOT_FOUND', message: 'Course not found' });
+        }
+        return res.json({ code: 'SUCCESS', message: 'Course deleted' });
+    } catch (error) {
         console.error(error);
         return res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Unexpected server error' });
     }

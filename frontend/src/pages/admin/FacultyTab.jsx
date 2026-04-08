@@ -1,6 +1,6 @@
 import styles from './AdminTable.module.css';
 
-export default function FacultyTab({ overview, onAddFaculty }) {
+export default function FacultyTab({ overview, onAddFaculty, onDeleteFaculty }) {
     return (
         <>
             <div className={styles.sectionHeader}>
@@ -18,6 +18,7 @@ export default function FacultyTab({ overview, onAddFaculty }) {
                                 <th>Name</th>
                                 <th>Code</th>
                                 <th>Courses</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -42,6 +43,15 @@ export default function FacultyTab({ overview, onAddFaculty }) {
                                             ) : (
                                                 <span className={styles.noValue}>None</span>
                                             )}
+                                        </td>
+                                        <td>
+                                            <button
+                                                className={styles.btnDanger}
+                                                type="button"
+                                                onClick={() => onDeleteFaculty(faculty.faculty_code)}
+                                            >
+                                                Delete
+                                            </button>
                                         </td>
                                     </tr>
                                 );

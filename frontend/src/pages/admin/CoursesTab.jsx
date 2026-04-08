@@ -1,6 +1,6 @@
 import styles from './AdminTable.module.css';
 
-export default function CoursesTab({ overview, onAddCourse }) {
+export default function CoursesTab({ overview, onAddCourse, onDeleteCourse }) {
     return (
         <>
             <div className={styles.sectionHeader}>
@@ -19,6 +19,7 @@ export default function CoursesTab({ overview, onAddCourse }) {
                                 <th>Code</th>
                                 <th>Faculty</th>
                                 <th>Students</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -47,6 +48,15 @@ export default function CoursesTab({ overview, onAddCourse }) {
                                             <span className={`${styles.badge} ${styles.badgeTeal}`}>
                                                 {mappedStudents.length} enrolled
                                             </span>
+                                        </td>
+                                        <td>
+                                            <button
+                                                className={styles.btnDanger}
+                                                type="button"
+                                                onClick={() => onDeleteCourse(course.course_code)}
+                                            >
+                                                Delete
+                                            </button>
                                         </td>
                                     </tr>
                                 );
