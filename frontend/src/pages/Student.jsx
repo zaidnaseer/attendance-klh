@@ -1,15 +1,18 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 import VerifyCameraView from '../components/VerifyCameraView';
-import { getStudentDashboard, markStudentAttendance } from '../lib/api';
+import StudentGate1 from '../components/StudentGate1';
+import { getStudentDashboard, markStudentAttendance } from '../lib/api';        
 import styles from './Student.module.css';
 
 export default function Student() {
+    const navigate = useNavigate();
     const [studentCode, setStudentCode] = useState('');
     const [activeCode, setActiveCode] = useState('');
     const [dashboard, setDashboard] = useState(null);
     const [verifyTarget, setVerifyTarget] = useState(null);
+    const [gate1Passed, setGate1Passed] = useState(false);
     const [toast, setToast] = useState(null);
 
     async function loadDashboard(code = activeCode) {
@@ -53,16 +56,35 @@ export default function Student() {
         <main className={styles.page}>
             <Toast toast={toast} />
             <section className={styles.panel}>
-                <h1>Student Dashboard</h1>
-                <form className={styles.form} onSubmit={submitCode}>
-                    <input
-                        className={styles.input}
-                        value={studentCode}
-                        onChange={(event) => setStudentCode(event.target.value)}
-                        placeholder="Enter student code"
-                    />
-                    <button className={styles.button} type="submit">Load</button>
-                </form>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h1>Student Dashboard</h1>
+                    {dashboard && (
+                        <button 
+                            className={`${styles.button} ${styles.delete}`} 
+                            type="button" 
+                            onClick={() => {
+                                setDashboard(null);
+                                setActiveCode('');
+                                setStudentCode('');
+                                setVerifyTarget(null);
+                                navigate('/');
+                            }}
+                        >
+                            Logout
+                        </button>
+                    )}
+                </div>
+                {!dashboard && (
+                    <form className={styles.form} onSubmit={submitCode}>
+                        <input
+                            className={styles.input}
+                            value={studentCode}
+                            onChange={(event) => setStudentCode(event.target.value)}
+                            placeholder="Enter student code"
+                        />
+                        <button className={styles.button} type="submit">Load</button>
+                    </form>
+                )}
             </section>
 
             {dashboard ? (
@@ -91,11 +113,14 @@ export default function Student() {
                                             <button
                                                 className={styles.button}
                                                 type="button"
-                                                onClick={() => setVerifyTarget({
-                                                    sessionId: course.active_session_id,
-                                                    courseCode: course.course_code,
-                                                    courseName: course.name,
-                                                })}
+                                                onClick={() => {
+                                                    setGate1Passed(false);
+                                                    setVerifyTarget({
+                                                        sessionId: course.active_session_id,
+                                                        courseCode: course.course_code,
+                                                        courseName: course.name,    
+                                                    });
+                                                }}
                                             >
                                                 Mark Attendance
                                             </button>
@@ -115,11 +140,20 @@ export default function Student() {
                 <section className={styles.panel}>
                     <h2>Verify for {verifyTarget.courseCode}</h2>
                     <p className={styles.meta}>{verifyTarget.courseName}</p>
-                    <VerifyCameraView
-                        studentCode={dashboard.student.student_code}
-                        studentName={dashboard.student.name}
-                        onVerified={handleVerified}
-                    />
+                    
+                    {!gate1Passed ? (
+                        <StudentGate1 
+                            sessionId={verifyTarget.sessionId} 
+                            studentId={dashboard.student.id} 
+                            onPass={() => setGate1Passed(true)} 
+                        />
+                    ) : (
+                        <VerifyCameraView
+                            studentCode={dashboard.student.student_code}
+                            studentName={dashboard.student.name}
+                            onVerified={handleVerified}
+                        />
+                    )}
                 </section>
             ) : null}
         </main>

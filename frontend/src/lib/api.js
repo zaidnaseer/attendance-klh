@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+const API_BASE_URL = '';
 
 async function request(path, options = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -129,6 +129,12 @@ export function facultyRemoveStudent(facultyCode, courseId, studentId) {
 
 export function startAttendanceSession(facultyCode, courseId) {
   return request(`/api/faculty/${encodeURIComponent(facultyCode)}/courses/${encodeURIComponent(courseId)}/sessions/start`, {
+    method: 'POST',
+  });
+}
+
+export function endAttendanceSession(facultyCode, courseId) {
+  return request(`/api/faculty/${encodeURIComponent(facultyCode)}/courses/${encodeURIComponent(courseId)}/sessions/end`, {
     method: 'POST',
   });
 }

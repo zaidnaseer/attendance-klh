@@ -1,5 +1,6 @@
 const express = require('express');
 const { pool } = require('../db/client');
+const qrService = require('../services/qrService');
 
 const router = express.Router();
 
@@ -27,7 +28,7 @@ router.get('/:facultyCode/dashboard', async (req, res) => {
 
         const courses = [];
         for (const course of coursesResult.rows) {
-            const [studentsResult, activeSessionResult, attendanceResult] = await Promise.all([
+            const [studentsResult, activeSessionResult, attendanceResult, pastSessionsResult] = await Promise.all([
                 pool.query(
                     `SELECT s.id, s.name, s.student_code, s.enrolled
            FROM course_students cs
@@ -48,7 +49,7 @@ router.get('/:facultyCode/dashboard', async (req, res) => {
                     `SELECT ar.id, ar.student_id, ar.marked_at, s.student_code, s.name
            FROM attendance_records ar
            JOIN students s ON s.id = ar.student_id
-           WHERE ar.session_id = (
+           WHERE ar.status = 'present' AND ar.session_id = (
              SELECT id
              FROM attendance_sessions
              WHERE course_id = $1 AND is_active = TRUE
@@ -58,6 +59,15 @@ router.get('/:facultyCode/dashboard', async (req, res) => {
            ORDER BY ar.marked_at DESC`,
                     [course.id],
                 ),
+                pool.query(
+                    `SELECT s.id, s.started_at, s.ended_at,
+                     (SELECT COUNT(*) FROM attendance_records ar WHERE ar.session_id = s.id AND ar.status = 'present') as present_count,
+                     (SELECT json_agg(ar.student_id) FROM attendance_records ar WHERE ar.session_id = s.id AND ar.status = 'present') as present_ids
+           FROM attendance_sessions s
+           WHERE s.course_id = $1 AND s.is_active = FALSE
+           ORDER BY s.started_at DESC`,
+                    [course.id],
+                ),
             ]);
 
             courses.push({
@@ -65,6 +75,7 @@ router.get('/:facultyCode/dashboard', async (req, res) => {
                 students: studentsResult.rows,
                 activeSession: activeSessionResult.rows[0] || null,
                 attendance: attendanceResult.rows,
+                pastSessions: pastSessionsResult.rows,
             });
         }
 
@@ -169,19 +180,27 @@ router.post('/:facultyCode/courses/:courseId/sessions/start', async (req, res) =
         }
 
         await client.query('BEGIN');
-        await client.query(
+        
+        const oldActiveResult = await client.query(
             `UPDATE attendance_sessions
        SET is_active = FALSE, ended_at = NOW()
-       WHERE course_id = $1 AND is_active = TRUE`,
+       WHERE course_id = $1 AND is_active = TRUE
+       RETURNING id`,
             [courseId],
         );
+        
+        if (oldActiveResult.rows.length > 0) {
+            qrService.stopSessionRotation(oldActiveResult.rows[0].id);
+        }
 
         const startedResult = await client.query(
             `INSERT INTO attendance_sessions (course_id, started_by_faculty_id, is_active)
        VALUES ($1, $2, TRUE)
-       RETURNING id, course_id, started_by_faculty_id, started_at, is_active`,
+       RETURNING id, course_id, started_by_faculty_id, started_at, is_active`,  
             [courseId, allowed.faculty_id],
         );
+        
+        qrService.startSessionRotation(startedResult.rows[0].id);
 
         await client.query('COMMIT');
         return res.status(201).json(startedResult.rows[0]);
@@ -191,6 +210,41 @@ router.post('/:facultyCode/courses/:courseId/sessions/start', async (req, res) =
         return res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Unexpected server error' });
     } finally {
         client.release();
+    }
+});
+
+router.post('/:facultyCode/courses/:courseId/sessions/end', async (req, res) => {
+    try {
+        const { facultyCode, courseId } = req.params;
+
+        const allowedResult = await pool.query(
+            `SELECT f.id AS faculty_id
+       FROM course_faculties cf
+       JOIN faculties f ON f.id = cf.faculty_id
+       WHERE f.faculty_code = $1 AND cf.course_id = $2`,
+            [facultyCode, courseId],
+        );
+
+        if (!allowedResult.rows[0]) {
+            return res.status(403).json({ code: 'FORBIDDEN', message: 'Faculty is not mapped to this course' });
+        }
+        
+        const oldActiveResult = await pool.query(
+            `UPDATE attendance_sessions
+       SET is_active = FALSE, ended_at = NOW()
+       WHERE course_id = $1 AND is_active = TRUE
+       RETURNING id`,
+            [courseId],
+        );
+        
+        if (oldActiveResult.rows.length > 0) {
+            qrService.stopSessionRotation(oldActiveResult.rows[0].id);
+        }
+
+        return res.status(200).json({ code: 'SUCCESS', message: 'Session ended successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Unexpected server error' });
     }
 });
 

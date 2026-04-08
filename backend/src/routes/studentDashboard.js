@@ -1,5 +1,6 @@
 const express = require('express');
 const { pool } = require('../db/client');
+const qrService = require('../services/qrService');
 
 const router = express.Router();
 
@@ -20,7 +21,7 @@ router.get('/:studentCode/dashboard', async (req, res) => {
             `SELECT c.id, c.name, c.course_code,
               session.id AS active_session_id,
               session.started_at AS active_session_started_at,
-              CASE WHEN ar.id IS NULL THEN FALSE ELSE TRUE END AS is_present
+              CASE WHEN ar.id IS NULL OR ar.status != 'present' THEN FALSE ELSE TRUE END AS is_present    
        FROM course_students cs
        JOIN courses c ON c.id = cs.course_id
        LEFT JOIN LATERAL (
@@ -98,10 +99,13 @@ router.post('/:studentCode/attendance/mark', async (req, res) => {
         const result = await pool.query(
             `INSERT INTO attendance_records (session_id, student_id, status)
        VALUES ($1, $2, 'present')
-       ON CONFLICT (session_id, student_id) DO UPDATE SET marked_at = NOW()
+       ON CONFLICT (session_id, student_id) DO UPDATE SET status = 'present', marked_at = NOW()
        RETURNING id, session_id, student_id, status, marked_at`,
             [sessionId, student.id],
         );
+        
+        // Notify faculty instantly
+        qrService.emitToFaculty(sessionId, 'attendance-marked', { studentId: student.id });
 
         return res.status(201).json({ code: 'SUCCESS', attendance: result.rows[0] });
     } catch (error) {

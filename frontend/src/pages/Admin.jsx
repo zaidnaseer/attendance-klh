@@ -252,6 +252,22 @@ export default function Admin() {
               overview={overview}
               onAddCourse={() => openModal('course')}
               onDeleteCourse={handleDeleteCourse}
+              onMapFaculty={async (courseId, newFacultyId, oldMappingId) => {
+                try {
+                  if (oldMappingId) {
+                    await unmapFacultyCourse(oldMappingId);
+                  }
+                  if (newFacultyId) {
+                    await mapFacultyToCourse({ courseId, facultyId: newFacultyId });
+                    setToast({ type: 'success', title: 'Faculty mapped', message: 'Course assignment updated' });
+                  } else {
+                    setToast({ type: 'success', title: 'Faculty unmapped', message: 'Course assignment removed' });
+                  }
+                  await loadOverview();
+                } catch (error) {
+                  setToast({ type: 'error', title: 'Mapping failed', message: error.message });
+                }
+              }}
             />
           )}
 

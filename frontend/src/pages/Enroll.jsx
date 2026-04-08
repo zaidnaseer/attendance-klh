@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getStudent } from '../lib/api';
 import CameraView from '../components/CameraView';
 import Toast from '../components/Toast';
@@ -7,6 +7,7 @@ import styles from './Enroll.module.css';
 
 export default function Enroll() {
   const { studentCode } = useParams();
+  const navigate = useNavigate();
   const [student, setStudent] = useState(null);
   const [toast, setToast] = useState(null);
   const [pageMessage, setPageMessage] = useState('');
@@ -52,22 +53,48 @@ export default function Enroll() {
   }
 
   if (!student) {
-    return <main className={styles.page}><Toast toast={toast} /><div className={styles.card}>{pageMessage || 'Enrollment unavailable.'}</div></main>;
+    return (
+      <main className={styles.page}>
+        <Toast toast={toast} />
+        <div className={styles.card}>
+          <p style={{ marginBottom: '16px' }}>{pageMessage || 'Enrollment unavailable.'}</p>
+          <Link to="/student" className={styles.actionBtn}>Go to Student Dashboard</Link>
+        </div>
+      </main>
+    );
   }
 
   if (student.enrolled) {
-    return <main className={styles.page}><Toast toast={toast} /><div className={styles.card}>Already enrolled. Nothing to do.</div></main>;
+    return (
+      <main className={styles.page}>
+        <Toast toast={toast} />
+        <div className={styles.card}>
+          <p style={{ marginBottom: '16px' }}>Already enrolled. Nothing to do.</p>
+          <Link to="/student" className={styles.actionBtn}>Go to Student Dashboard</Link>
+        </div>
+      </main>
+    );
   }
 
   return (
     <main className={styles.page}>
       <Toast toast={toast} />
       <section className={styles.header}>
-        <p className={styles.kicker}>Enrollment</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <p className={styles.kicker}>Enrollment</p>
+          <Link to="/student" className={styles.actionBtn}>Student Dashboard</Link>
+        </div>
         <h1>{student.name}</h1>
         <p className={styles.copy}>Follow the on-screen poses to complete your enrollment.</p>
       </section>
-      <CameraView studentCode={studentCode} studentName={student.name} onSuccess={(result) => setToast({ type: 'success', title: 'Success', message: result.code })} />
+      <CameraView 
+        studentCode={studentCode} 
+        studentName={student.name} 
+        onSuccess={(result) => {
+          setToast({ type: 'success', title: 'Success', message: result.code });
+          setTimeout(() => navigate('/student'), 3000);
+        }} 
+      />
     </main>
   );
 }

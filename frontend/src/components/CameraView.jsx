@@ -545,7 +545,7 @@ export default function CameraView({ studentCode, studentName, onSuccess }) {
             </svg>
             <h2>Enrollment complete!</h2>
             <p>{studentName || success.studentName}</p>
-            <p>You may now close this page.</p>
+            <p>Redirecting to dashboard...</p>
           </div>
         </div>
       );
