@@ -119,8 +119,8 @@ export default function Admin() {
           return;
         }
         await mapFacultyToCourse({
-          courseId: Number.parseInt(facultyMapForm.courseId, 10),
-          facultyId: Number.parseInt(facultyMapForm.facultyId, 10),
+          courseId: facultyMapForm.courseId,
+          facultyId: facultyMapForm.facultyId,
         });
         setToast({ type: 'success', title: 'Faculty mapped', message: 'Course assignment updated' });
       }
@@ -135,8 +135,8 @@ export default function Admin() {
           return;
         }
         await mapStudentToCourse({
-          courseId: Number.parseInt(studentMapForm.courseId, 10),
-          studentId: Number.parseInt(studentMapForm.studentId, 10),
+          courseId: studentMapForm.courseId,
+          studentId: studentMapForm.studentId,
         });
         setToast({ type: 'success', title: 'Student enrolled', message: 'Course enrollment updated' });
       }
