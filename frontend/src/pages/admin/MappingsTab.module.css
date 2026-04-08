@@ -1,75 +1,75 @@
 .mappingGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
 }
 
 .mappingCard {
-  background: rgba(15, 23, 42, 0.72);
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 12px;
-  padding: 18px;
+    background: rgba(15, 23, 42, 0.72);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 12px;
+    padding: 18px;
 }
 
 .mappingCardTitle {
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 10px;
 }
 
 .mappingList {
-  margin-top: 14px;
+    margin-top: 14px;
 }
 
 .mappingItem {
-  background: rgba(2, 6, 23, 0.55);
-  border: 1px solid rgba(148, 163, 184, 0.1);
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin-bottom: 8px;
+    background: rgba(2, 6, 23, 0.55);
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
 }
 
 .mappingItemTitle {
-  font-size: 13px;
-  font-weight: 500;
-  color: #e8eaf0;
-  margin-bottom: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #e8eaf0;
+    margin-bottom: 4px;
 }
 
 .mappingItemSub {
-  font-size: 11px;
-  color: rgba(140, 150, 170, 0.7);
+    font-size: 11px;
+    color: rgba(140, 150, 170, 0.7);
 }
 
 .noMapping {
-  font-size: 12px;
-  color: rgba(140, 150, 170, 0.6);
+    font-size: 12px;
+    color: rgba(140, 150, 170, 0.6);
 }
 
 .btnTeal,
 .btnSmall {
-  border: 0;
-  border-radius: 8px;
-  padding: 8px 14px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
+    border: 0;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
 }
 
 .btnTeal {
-  background: rgba(34, 197, 94, 0.15);
-  color: #86efac;
+    background: rgba(34, 197, 94, 0.15);
+    color: #86efac;
 }
 
 .btnSmall {
-  width: 100%;
-  margin-top: 8px;
-  background: rgba(56, 189, 248, 0.15);
-  color: #38bdf8;
+    width: 100%;
+    margin-top: 8px;
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
 }
 
 @media (max-width: 1200px) {
-  .mappingGrid {
-    grid-template-columns: 1fr;
-  }
+    .mappingGrid {
+        grid-template-columns: 1fr;
+    }
 }
