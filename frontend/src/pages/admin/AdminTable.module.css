@@ -11,6 +11,7 @@
 }
 
 .tableWrap {
+    width: 100%;
     background: rgba(15, 23, 42, 0.72);
     border: 1px solid rgba(148, 163, 184, 0.16);
     border-radius: 12px;
@@ -112,8 +113,15 @@
 }
 
 @media (max-width: 768px) {
-    .table {
-        display: block;
+    .tableWrap {
+        width: 100%;
         overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .table {
+        display: table;
+        width: 100%;
+        min-width: 580px;
     }
 }
