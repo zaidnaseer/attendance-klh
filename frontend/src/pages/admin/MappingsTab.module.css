@@ -12,7 +12,7 @@
 }
 
 .mappingCardTitle {
-    font-size: 13px;
+    font-size: 20px;
     font-weight: 600;
     margin-bottom: 10px;
 }
@@ -30,19 +30,19 @@
 }
 
 .mappingItemTitle {
-    font-size: 13px;
+    font-size: 17px;
     font-weight: 500;
     color: #e8eaf0;
     margin-bottom: 4px;
 }
 
 .mappingItemSub {
-    font-size: 11px;
+    font-size: 16px;
     color: rgba(140, 150, 170, 0.7);
 }
 
 .noMapping {
-    font-size: 12px;
+    font-size: 16px;
     color: rgba(140, 150, 170, 0.6);
 }
 
@@ -50,8 +50,8 @@
 .btnSmall {
     border: 0;
     border-radius: 8px;
-    padding: 8px 14px;
-    font-size: 12px;
+    padding: 10px 16px;
+    font-size: 15px;
     font-weight: 600;
     cursor: pointer;
 }
