@@ -40,7 +40,7 @@ async function frameToBlob(video, canvas) {
     });
 }
 
-export default function VerifyCameraView({ studentCode, studentName }) {
+export default function VerifyCameraView({ studentCode, studentName, onVerified }) {
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
     const streamRef = useRef(null);
@@ -108,13 +108,14 @@ export default function VerifyCameraView({ studentCode, studentName }) {
             const response = await verifyStudent(studentCode, formData);
             setResult({ type: 'success', message: response.message, similarity: response.similarity });
             setStatus('Verification successful');
+            onVerified?.(response);
         } catch (error) {
             setResult({ type: 'error', message: mapVerifyError(error) });
             setStatus('Verification failed');
         } finally {
             setLoading(false);
         }
-    }, [loading, studentCode]);
+    }, [loading, onVerified, studentCode]);
 
     const resultCard = useMemo(() => {
         if (!result) {

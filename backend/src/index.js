@@ -6,6 +6,9 @@ const rateLimit = require('express-rate-limit');
 const studentsRouter = require('./routes/students');
 const enrollRouter = require('./routes/enroll');
 const verifyRouter = require('./routes/verify');
+const adminRouter = require('./routes/admin');
+const facultyRouter = require('./routes/faculty');
+const studentDashboardRouter = require('./routes/studentDashboard');
 const { migrate } = require('./db/migrate');
 
 const app = express();
@@ -31,6 +34,9 @@ const verifyLimiter = rateLimit({
 app.use('/api/enroll', enrollLimiter, enrollRouter);
 app.use('/api/verify', verifyLimiter, verifyRouter);
 app.use('/api/students', studentsRouter);
+app.use('/api/admin', adminRouter);
+app.use('/api/faculty', facultyRouter);
+app.use('/api/student', studentDashboardRouter);
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });

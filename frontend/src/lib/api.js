@@ -53,3 +53,81 @@ export function verifyStudent(studentCode, formData) {
     body: formData,
   });
 }
+
+export function getAdminOverview() {
+  return request('/api/admin/overview');
+}
+
+export function createFaculty(payload) {
+  return request('/api/admin/faculties', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function createCourse(payload) {
+  return request('/api/admin/courses', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function mapFacultyToCourse(payload) {
+  return request('/api/admin/course-faculties', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function unmapFacultyCourse(mappingId) {
+  return request(`/api/admin/course-faculties/${encodeURIComponent(mappingId)}`, {
+    method: 'DELETE',
+  });
+}
+
+export function mapStudentToCourse(payload) {
+  return request('/api/admin/course-students', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function unmapStudentCourse(mappingId) {
+  return request(`/api/admin/course-students/${encodeURIComponent(mappingId)}`, {
+    method: 'DELETE',
+  });
+}
+
+export function getFacultyDashboard(facultyCode) {
+  return request(`/api/faculty/${encodeURIComponent(facultyCode)}/dashboard`);
+}
+
+export function facultyAddStudent(facultyCode, courseId, studentId) {
+  return request(`/api/faculty/${encodeURIComponent(facultyCode)}/courses/${encodeURIComponent(courseId)}/students`, {
+    method: 'POST',
+    body: JSON.stringify({ studentId }),
+  });
+}
+
+export function facultyRemoveStudent(facultyCode, courseId, studentId) {
+  return request(`/api/faculty/${encodeURIComponent(facultyCode)}/courses/${encodeURIComponent(courseId)}/students/${encodeURIComponent(studentId)}`, {
+    method: 'DELETE',
+  });
+}
+
+export function startAttendanceSession(facultyCode, courseId) {
+  return request(`/api/faculty/${encodeURIComponent(facultyCode)}/courses/${encodeURIComponent(courseId)}/sessions/start`, {
+    method: 'POST',
+  });
+}
+
+export function getStudentDashboard(studentCode) {
+  return request(`/api/student/${encodeURIComponent(studentCode)}/dashboard`);
+}
+
+export function markStudentAttendance(studentCode, sessionId) {
+  return request(`/api/student/${encodeURIComponent(studentCode)}/attendance/mark`, {
+    method: 'POST',
+    body: JSON.stringify({ sessionId }),
+  });
+}
