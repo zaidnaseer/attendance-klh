@@ -1,0 +1,96 @@
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal {
+  width: 420px;
+  max-width: 90vw;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+}
+
+.modalHeader,
+.modalFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.modalFooter {
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+  border-bottom: 0;
+}
+
+.modalTitle {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.closeBtn {
+  background: transparent;
+  border: 0;
+  color: rgba(140, 150, 170, 0.7);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.modalBody {
+  padding: 18px;
+}
+
+.formGroup {
+  margin-bottom: 12px;
+}
+
+.formLabel {
+  display: block;
+  font-size: 11px;
+  margin-bottom: 5px;
+  color: rgba(140, 150, 170, 0.8);
+}
+
+.formInput {
+  width: 100%;
+  background: rgba(2, 6, 23, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #e8eaf0;
+}
+
+.formInput:focus {
+  outline: none;
+  border-color: #38bdf8;
+}
+
+.btnPrimary,
+.btnGhost {
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btnPrimary {
+  background: linear-gradient(135deg, #38bdf8, #22c55e);
+  color: #0f1117;
+}
+
+.btnGhost {
+  background: transparent;
+  color: rgba(140, 150, 170, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}

@@ -11,9 +11,22 @@ import {
   unmapStudentCourse,
 } from '../lib/api';
 import Toast from '../components/Toast';
-import styles from './Admin.module.css';
+import layout from './admin/AdminLayout.module.css';
+import {
+  AdminModal,
+  CoursesTab,
+  FacultyTab,
+  MappingsTab,
+  OverviewTab,
+  Sidebar,
+  StudentsTab,
+  Topbar,
+  getAvatarStyle,
+  getInitials,
+} from './admin/index.js';
 
 export default function Admin() {
+  const [activeTab, setActiveTab] = useState('overview');
   const [overview, setOverview] = useState({
     faculties: [],
     courses: [],
@@ -21,20 +34,17 @@ export default function Admin() {
     courseFaculties: [],
     courseStudents: [],
   });
-
-  const [facultyName, setFacultyName] = useState('');
-  const [facultyCode, setFacultyCode] = useState('');
-  const [courseName, setCourseName] = useState('');
-  const [courseCode, setCourseCode] = useState('');
-  const [name, setName] = useState('');
-  const [studentCode, setStudentCode] = useState('');
-
-  const [selectedCourseForFaculty, setSelectedCourseForFaculty] = useState('');
-  const [selectedFaculty, setSelectedFaculty] = useState('');
-  const [selectedCourseForStudent, setSelectedCourseForStudent] = useState('');
-  const [selectedStudent, setSelectedStudent] = useState('');
-
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalType, setModalType] = useState('');
   const [toast, setToast] = useState(null);
+
+  const [facultyForm, setFacultyForm] = useState({ name: '', code: '' });
+  const [courseForm, setCourseForm] = useState({ name: '', code: '' });
+  const [studentForm, setStudentForm] = useState({ name: '', code: '' });
+  const [facultyMapForm, setFacultyMapForm] = useState({ courseId: '', facultyId: '' });
+  const [studentMapForm, setStudentMapForm] = useState({ courseId: '', studentId: '' });
+
+  const totalMappings = overview.courseFaculties.length + overview.courseStudents.length;
 
   async function loadOverview() {
     try {
@@ -51,225 +61,191 @@ export default function Admin() {
     return () => clearInterval(interval);
   }, []);
 
-  async function handleFacultySubmit(event) {
-    event.preventDefault();
-    try {
-      await createFaculty({ name: facultyName, facultyCode });
-      setFacultyName('');
-      setFacultyCode('');
-      setToast({ type: 'success', title: 'Faculty added', message: facultyCode });
-      loadOverview();
-    } catch (error) {
-      setToast({ type: 'error', title: 'Add faculty failed', message: error.message });
-    }
-  }
+  const resetForms = () => {
+    setFacultyForm({ name: '', code: '' });
+    setCourseForm({ name: '', code: '' });
+    setStudentForm({ name: '', code: '' });
+    setFacultyMapForm({ courseId: '', facultyId: '' });
+    setStudentMapForm({ courseId: '', studentId: '' });
+  };
 
-  async function handleCourseSubmit(event) {
-    event.preventDefault();
-    try {
-      await createCourse({ name: courseName, courseCode });
-      setCourseName('');
-      setCourseCode('');
-      setToast({ type: 'success', title: 'Course added', message: courseCode });
-      loadOverview();
-    } catch (error) {
-      setToast({ type: 'error', title: 'Add course failed', message: error.message });
-    }
-  }
+  const openModal = (type) => {
+    setModalType(type);
+    setModalOpen(true);
+  };
 
-  async function handleStudentSubmit(event) {
-    event.preventDefault();
-    try {
-      await createStudent({ name, studentCode });
-      setName('');
-      setStudentCode('');
-      setToast({ type: 'success', title: 'Student added', message: studentCode });
-      loadOverview();
-    } catch (error) {
-      setToast({ type: 'error', title: 'Add student failed', message: error.message });
-    }
-  }
+  const closeModal = () => {
+    setModalOpen(false);
+    setModalType('');
+    resetForms();
+  };
 
-  async function handleMapFaculty(event) {
-    event.preventDefault();
+  const handleSaveModal = async () => {
     try {
-      await mapFacultyToCourse({
-        courseId: selectedCourseForFaculty,
-        facultyId: selectedFaculty,
-      });
-      setToast({ type: 'success', title: 'Faculty mapped', message: 'Course ownership updated' });
-      loadOverview();
-    } catch (error) {
-      setToast({ type: 'error', title: 'Faculty mapping failed', message: error.message });
-    }
-  }
+      if (modalType === 'faculty') {
+        if (!facultyForm.name || !facultyForm.code) {
+          setToast({ type: 'error', title: 'Validation', message: 'All fields required' });
+          return;
+        }
+        await createFaculty({ name: facultyForm.name, facultyCode: facultyForm.code });
+        setToast({ type: 'success', title: 'Faculty added', message: facultyForm.code });
+      }
 
-  async function handleMapStudent(event) {
-    event.preventDefault();
-    try {
-      await mapStudentToCourse({
-        courseId: selectedCourseForStudent,
-        studentId: selectedStudent,
-      });
-      setToast({ type: 'success', title: 'Student mapped', message: 'Course roster updated' });
-      loadOverview();
-    } catch (error) {
-      setToast({ type: 'error', title: 'Student mapping failed', message: error.message });
-    }
-  }
+      if (modalType === 'course') {
+        if (!courseForm.name || !courseForm.code) {
+          setToast({ type: 'error', title: 'Validation', message: 'All fields required' });
+          return;
+        }
+        await createCourse({ name: courseForm.name, courseCode: courseForm.code });
+        setToast({ type: 'success', title: 'Course added', message: courseForm.code });
+      }
 
-  async function handleDelete(code) {
+      if (modalType === 'student') {
+        if (!studentForm.name || !studentForm.code) {
+          setToast({ type: 'error', title: 'Validation', message: 'All fields required' });
+          return;
+        }
+        await createStudent({ name: studentForm.name, studentCode: studentForm.code });
+        setToast({ type: 'success', title: 'Student added', message: studentForm.code });
+      }
+
+      if (modalType === 'mapFaculty') {
+        if (!facultyMapForm.courseId || !facultyMapForm.facultyId) {
+          setToast({
+            type: 'error',
+            title: 'Validation',
+            message: 'Please select both course and faculty',
+          });
+          return;
+        }
+        await mapFacultyToCourse({
+          courseId: Number.parseInt(facultyMapForm.courseId, 10),
+          facultyId: Number.parseInt(facultyMapForm.facultyId, 10),
+        });
+        setToast({ type: 'success', title: 'Faculty mapped', message: 'Course assignment updated' });
+      }
+
+      if (modalType === 'mapStudent') {
+        if (!studentMapForm.courseId || !studentMapForm.studentId) {
+          setToast({
+            type: 'error',
+            title: 'Validation',
+            message: 'Please select both course and student',
+          });
+          return;
+        }
+        await mapStudentToCourse({
+          courseId: Number.parseInt(studentMapForm.courseId, 10),
+          studentId: Number.parseInt(studentMapForm.studentId, 10),
+        });
+        setToast({ type: 'success', title: 'Student enrolled', message: 'Course enrollment updated' });
+      }
+
+      await loadOverview();
+      closeModal();
+    } catch (error) {
+      setToast({ type: 'error', title: 'Error', message: error.message });
+    }
+  };
+
+  const handleDeleteStudent = async (studentCode) => {
+    if (!window.confirm('Delete this student?')) {
+      return;
+    }
+
     try {
-      await deleteStudent(code);
-      setToast({ type: 'success', title: 'Student deleted', message: code });
-      loadOverview();
+      await deleteStudent(studentCode);
+      setToast({ type: 'success', title: 'Student deleted', message: studentCode });
+      await loadOverview();
     } catch (error) {
       setToast({ type: 'error', title: 'Delete failed', message: error.message });
     }
-  }
+  };
 
-  async function handleRemoveFacultyMapping(mappingId) {
+  const handleRemoveFacultyMapping = async (mappingId) => {
     try {
       await unmapFacultyCourse(mappingId);
-      setToast({ type: 'success', title: 'Faculty mapping removed', message: 'Removed' });
-      loadOverview();
+      setToast({ type: 'success', title: 'Mapping removed', message: '' });
+      await loadOverview();
     } catch (error) {
-      setToast({ type: 'error', title: 'Remove mapping failed', message: error.message });
+      setToast({ type: 'error', title: 'Remove failed', message: error.message });
     }
-  }
+  };
 
-  async function handleRemoveStudentMapping(mappingId) {
+  const handleRemoveStudentMapping = async (mappingId) => {
     try {
       await unmapStudentCourse(mappingId);
-      setToast({ type: 'success', title: 'Student mapping removed', message: 'Removed' });
-      loadOverview();
+      setToast({ type: 'success', title: 'Mapping removed', message: '' });
+      await loadOverview();
     } catch (error) {
-      setToast({ type: 'error', title: 'Remove mapping failed', message: error.message });
+      setToast({ type: 'error', title: 'Remove failed', message: error.message });
     }
-  }
+  };
 
   return (
-    <main className={styles.page}>
+    <div className={layout.dashboard}>
       <Toast toast={toast} />
-      <section className={styles.panel}>
-        <h1>Admin Dashboard</h1>
-        <p className={styles.sub}>Create entities and control course mappings.</p>
-      </section>
 
-      <section className={styles.panel}>
-        <h2>Add Faculty</h2>
-        <form className={styles.form} onSubmit={handleFacultySubmit}>
-          <input value={facultyName} onChange={(event) => setFacultyName(event.target.value)} placeholder="Faculty name" className={styles.input} />
-          <input value={facultyCode} onChange={(event) => setFacultyCode(event.target.value)} placeholder="Faculty code" className={styles.input} />
-          <button className={styles.button} type="submit">Add faculty</button>
-        </form>
-      </section>
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      <section className={styles.panel}>
-        <h2>Add Course</h2>
-        <form className={styles.form} onSubmit={handleCourseSubmit}>
-          <input value={courseName} onChange={(event) => setCourseName(event.target.value)} placeholder="Course name" className={styles.input} />
-          <input value={courseCode} onChange={(event) => setCourseCode(event.target.value)} placeholder="Course code" className={styles.input} />
-          <button className={styles.button} type="submit">Add course</button>
-        </form>
-      </section>
+      <div className={layout.main}>
+        <Topbar activeTab={activeTab} overview={overview} />
 
-      <section className={styles.panel}>
-        <h2>Add Student</h2>
-        <form className={styles.form} onSubmit={handleStudentSubmit}>
-          <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Student name" className={styles.input} />
-          <input value={studentCode} onChange={(event) => setStudentCode(event.target.value)} placeholder="Student code" className={styles.input} />
-          <button className={styles.button} type="submit">Add student</button>
-        </form>
-      </section>
+        <div className={layout.content}>
+          {activeTab === 'overview' && (
+            <OverviewTab
+              overview={overview}
+              totalMappings={totalMappings}
+              getInitials={getInitials}
+              getAvatarStyle={getAvatarStyle}
+            />
+          )}
 
-      <section className={styles.panel}>
-        <h2>Map Faculty to Course</h2>
-        <form className={styles.form} onSubmit={handleMapFaculty}>
-          <select className={styles.input} value={selectedCourseForFaculty} onChange={(event) => setSelectedCourseForFaculty(event.target.value)}>
-            <option value="">Select course</option>
-            {overview.courses.map((course) => (
-              <option key={course.id} value={course.id}>{course.course_code} - {course.name}</option>
-            ))}
-          </select>
-          <select className={styles.input} value={selectedFaculty} onChange={(event) => setSelectedFaculty(event.target.value)}>
-            <option value="">Select faculty</option>
-            {overview.faculties.map((faculty) => (
-              <option key={faculty.id} value={faculty.id}>{faculty.faculty_code} - {faculty.name}</option>
-            ))}
-          </select>
-          <button className={styles.button} type="submit" disabled={!selectedCourseForFaculty || !selectedFaculty}>Map faculty</button>
-        </form>
-      </section>
+          {activeTab === 'faculty' && (
+            <FacultyTab overview={overview} onAddFaculty={() => openModal('faculty')} />
+          )}
 
-      <section className={styles.panel}>
-        <h2>Map Student to Course</h2>
-        <form className={styles.form} onSubmit={handleMapStudent}>
-          <select className={styles.input} value={selectedCourseForStudent} onChange={(event) => setSelectedCourseForStudent(event.target.value)}>
-            <option value="">Select course</option>
-            {overview.courses.map((course) => (
-              <option key={course.id} value={course.id}>{course.course_code} - {course.name}</option>
-            ))}
-          </select>
-          <select className={styles.input} value={selectedStudent} onChange={(event) => setSelectedStudent(event.target.value)}>
-            <option value="">Select student</option>
-            {overview.students.map((student) => (
-              <option key={student.id} value={student.id}>{student.student_code} - {student.name}</option>
-            ))}
-          </select>
-          <button className={styles.button} type="submit" disabled={!selectedCourseForStudent || !selectedStudent}>Map student</button>
-        </form>
-      </section>
+          {activeTab === 'students' && (
+            <StudentsTab
+              overview={overview}
+              onAddStudent={() => openModal('student')}
+              onDeleteStudent={handleDeleteStudent}
+            />
+          )}
 
-      <section className={styles.panel}>
-        <h2>Faculty-Course Mappings</h2>
-        <div className={styles.table}>
-          {overview.courseFaculties.map((mapping) => (
-            <div className={styles.row} key={mapping.id}>
-              <span>{mapping.course_code} - {mapping.course_name}</span>
-              <span>{mapping.faculty_code} - {mapping.faculty_name}</span>
-              <button className={styles.delete} type="button" onClick={() => handleRemoveFacultyMapping(mapping.id)}>Remove</button>
-            </div>
-          ))}
+          {activeTab === 'courses' && (
+            <CoursesTab overview={overview} onAddCourse={() => openModal('course')} />
+          )}
+
+          {activeTab === 'mappings' && (
+            <MappingsTab
+              overview={overview}
+              onAssignFaculty={() => openModal('mapFaculty')}
+              onEnrollStudent={() => openModal('mapStudent')}
+              onRemoveFacultyMapping={handleRemoveFacultyMapping}
+              onRemoveStudentMapping={handleRemoveStudentMapping}
+            />
+          )}
         </div>
-      </section>
+      </div>
 
-      <section className={styles.panel}>
-        <h2>Student-Course Mappings</h2>
-        <div className={styles.table}>
-          {overview.courseStudents.map((mapping) => (
-            <div className={styles.row} key={mapping.id}>
-              <span>{mapping.course_code} - {mapping.course_name}</span>
-              <span>{mapping.student_code} - {mapping.student_name}</span>
-              <button className={styles.delete} type="button" onClick={() => handleRemoveStudentMapping(mapping.id)}>Remove</button>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className={styles.panel}>
-        <h2>Students</h2>
-        <div className={styles.table}>
-          <div className={styles.headRow}>
-            <span>Name</span>
-            <span>Student Code</span>
-            <span>Enrolled</span>
-            <span />
-          </div>
-          {overview.students.map((student) => (
-            <div className={styles.row} key={student.id}>
-              <span>{student.name}</span>
-              <span>{student.student_code}</span>
-              <span>
-                <span className={`${styles.badge} ${student.enrolled ? styles.ready : styles.waiting}`}>
-                  {student.enrolled ? 'Enrolled' : 'Pending'}
-                </span>
-              </span>
-              <button className={styles.delete} type="button" onClick={() => handleDelete(student.student_code)}>Delete</button>
-            </div>
-          ))}
-        </div>
-      </section>
-    </main>
+      <AdminModal
+        modalOpen={modalOpen}
+        modalType={modalType}
+        closeModal={closeModal}
+        handleSaveModal={handleSaveModal}
+        facultyForm={facultyForm}
+        setFacultyForm={setFacultyForm}
+        studentForm={studentForm}
+        setStudentForm={setStudentForm}
+        courseForm={courseForm}
+        setCourseForm={setCourseForm}
+        facultyMapForm={facultyMapForm}
+        setFacultyMapForm={setFacultyMapForm}
+        studentMapForm={studentMapForm}
+        setStudentMapForm={setStudentMapForm}
+        overview={overview}
+      />
+    </div>
   );
 }
