@@ -74,7 +74,13 @@ const FacultyQRPanel = ({ sessionId, isActive, onAttendanceMarked }) => {
             <h3>GATE 1 — Presence Verification</h3>
             <div style={{ ...styles.qrContainer, opacity: fade ? 0 : 1 }}>
                 {qrData.jwt ? (
-                    <QRCodeSVG value={qrData.jwt} size={240} />
+                    <QRCodeSVG 
+                        value={qrData.jwt} 
+                        size={240} 
+                        bgColor="#ffffff" 
+                        fgColor="#000000" 
+                        marginSize={2} 
+                    />
                 ) : (
                     <div style={styles.placeholder}>Waiting for QR...</div>
                 )}

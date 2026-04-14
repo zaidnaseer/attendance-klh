@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import io from 'socket.io-client';
 
@@ -10,6 +10,7 @@ const StudentGate1 = ({ sessionId, studentId, onPass }) => {
     const [secondsRemaining, setSecondsRemaining] = useState(0);
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const hasScannedRef = useRef(false);
 
     useEffect(() => {
         const socket = io(API_BASE_URL);
@@ -31,6 +32,8 @@ const StudentGate1 = ({ sessionId, studentId, onPass }) => {
     }, [sessionId]);
 
     const handleSubmit = async (inputToken) => {
+        if (hasScannedRef.current) return;
+        hasScannedRef.current = true;
         setIsSubmitting(true);
         setError('');
 
@@ -69,6 +72,10 @@ const StudentGate1 = ({ sessionId, studentId, onPass }) => {
             setError('Network error connecting to server');
         } finally {
             setIsSubmitting(false);
+            // Allow scanning again after 2 seconds if submission completely fails or gives an error
+            setTimeout(() => {
+                hasScannedRef.current = false;
+            }, 2000);
         }
     };
 
@@ -102,7 +109,7 @@ const StudentGate1 = ({ sessionId, studentId, onPass }) => {
                 <div style={styles.scanContainer}>
                     <Scanner
                         onScan={(result) => {
-                            if (result && result.length > 0 && !isSubmitting) { 
+                            if (result && result.length > 0) { 
                                 handleSubmit(result[0].rawValue);
                             }
                         }}
@@ -112,8 +119,9 @@ const StudentGate1 = ({ sessionId, studentId, onPass }) => {
                                 setError("Camera access denied or unsupported. Please accept permissions.");
                             }
                         }}
-                        formats={['qr_code']}
-                        components={{ finder: false }}
+                        components={{
+                            finder: true
+                        }}
                     />
                     <p style={styles.hint}>Point your camera at the faculty's screen</p>
                 </div>

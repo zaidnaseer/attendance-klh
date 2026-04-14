@@ -161,7 +161,7 @@ class QrService {
                 method = 'shortcode';
                 // Lookup by shortcode
                 const res = await pool.query(
-                    `SELECT token_id, is_active, expires_at, used_by FROM qr_tokens 
+                    `SELECT token_id, is_active, expires_at FROM qr_tokens 
                      WHERE session_id = $1 AND shortcode = $2 ORDER BY issued_at DESC LIMIT 1`,
                     [sessionId, input]
                 );
@@ -173,9 +173,6 @@ class QrService {
                 
                 if (!res.rows[0].is_active || new Date() > res.rows[0].expires_at) {
                     return this.logAttemptAndReturn(tokenIdToLog, studentId, sessionId, method, 'TOKEN_EXPIRED');
-                }
-                if (res.rows[0].used_by) {
-                    return this.logAttemptAndReturn(tokenIdToLog, studentId, sessionId, method, 'TOKEN_ALREADY_USED');
                 }
 
             } else {
@@ -194,7 +191,7 @@ class QrService {
                 }
 
                 const res = await pool.query(
-                    `SELECT is_active, expires_at, used_by FROM qr_tokens WHERE token_id = $1 AND session_id = $2`,
+                    `SELECT is_active, expires_at FROM qr_tokens WHERE token_id = $1 AND session_id = $2`,
                     [parsedTokenId, sessionId]
                 );
 
@@ -203,9 +200,6 @@ class QrService {
                 }
                 if (!res.rows[0].is_active || new Date() > res.rows[0].expires_at) {
                     return this.logAttemptAndReturn(parsedTokenId, studentId, sessionId, method, 'TOKEN_EXPIRED');
-                }
-                if (res.rows[0].used_by) {
-                    return this.logAttemptAndReturn(parsedTokenId, studentId, sessionId, method, 'TOKEN_ALREADY_USED');
                 }
             }
 
@@ -231,12 +225,6 @@ class QrService {
             if (attendRes.rowCount > 0 && attendRes.rows[0].ble_passed) {
                 return this.logAttemptAndReturn(tokenIdToLog, studentId, sessionId, method, 'ALREADY_PASSED');
             }
-
-            // Success! Update token
-            await pool.query(
-                `UPDATE qr_tokens SET used_by = $1, used_at = CURRENT_TIMESTAMP WHERE token_id = $2`,
-                [studentId, tokenIdToLog]
-            );
 
             // Update attendance record (Gate 1 passed)
             if (attendRes.rowCount > 0) {

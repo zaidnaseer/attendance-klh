@@ -53,8 +53,11 @@ export default function VerifyCameraView({ studentCode, studentName, onVerified 
     useEffect(() => {
         let mounted = true;
 
-        async function startCamera() {
+        async function startCamera(retries = 0) {
             try {
+                // Short wait allows previous components (like QR Scanner) to release the camera hardware lock seamlessly
+                if (retries === 0) await new Promise(r => setTimeout(r, 600));
+
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: {
                         facingMode: 'user',
@@ -69,11 +72,19 @@ export default function VerifyCameraView({ studentCode, studentName, onVerified 
                 }
 
                 streamRef.current = stream;
-                videoRef.current.srcObject = stream;
-                await videoRef.current.play();
+                if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
+                    await videoRef.current.play();
+                }
                 setStatus('Align your face, then tap Verify');
             } catch (_error) {
-                setCameraError('Unable to access camera. Check browser permissions.');
+                console.error("Camera start error:", _error);
+                if (retries < 3) {
+                    // Retry starting camera automatically if it's locked by another process temporarily
+                    setTimeout(() => startCamera(retries + 1), 1000);
+                } else {
+                    setCameraError('Unable to access camera. Check browser permissions or close other apps using it.');
+                }
             }
         }
 
