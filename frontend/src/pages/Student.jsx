@@ -205,6 +205,14 @@ export default function Student() {
                                                     </span>
                                                 </div>
                                             )}
+                                            {course.active_session_id && !course.is_present && (
+                                                <p className={styles.meta}>
+                                                    Requires: {getGates(course.active_session_verification_mode || 'qr')
+                                                        .map((g) => (g === 'gps' ? 'Location' : 'QR code'))
+                                                        .concat('Face check')
+                                                        .join(' → ')}
+                                                </p>
+                                            )}
                                         </div>
                                         {course.active_session_id ? (
                                             course.is_present ? (
@@ -255,8 +263,6 @@ export default function Student() {
                             key={`gps-${verifyTarget.sessionId}`}
                             sessionId={verifyTarget.sessionId}
                             studentId={dashboard.student.id}
-                            step={gateIndex + 1}
-                            totalSteps={verifyTarget.gates.length + 1}
                             onPass={() => setGateIndex((index) => index + 1)}
                         />
                     ) : currentGate === 'qr' ? (
