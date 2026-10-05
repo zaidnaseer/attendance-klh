@@ -74,7 +74,7 @@ export default function LiveTab({ course, actions, institution, savingMode }) {
     return (
         <div className={styles.stack}>
             <div className={styles.row2}>
-                <span className={styles.live}><span className={styles.liveDot} />Session live · started {started}</span>
+                <span className={styles.live}><span className={styles.liveDot} />Session live · started {started} · {VERIFICATION_OPTIONS.find((o) => o.value === session.verification_mode)?.label || 'QR Code'}</span>
                 <button
                     type="button"
                     className={`${styles.btn} ${styles.btnDanger}`}
@@ -95,6 +95,8 @@ export default function LiveTab({ course, actions, institution, savingMode }) {
                 <FacultyGPSPanel
                     sessionId={session.id}
                     institution={institution}
+                    presentCount={present.length}
+                    totalCount={course.students.length}
                     onAttendanceMarked={usesQr(session.verification_mode) ? undefined : actions.refresh}
                 />
             )}
