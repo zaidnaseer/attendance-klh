@@ -2,26 +2,35 @@ import { useEffect, useState } from 'react';
 import io from 'socket.io-client';
 import { getGpsStats } from '../lib/api';
 import { formatDistance } from '../lib/geolocation';
+import styles from './FacultyGPSPanel.module.css';
 
 const API_BASE_URL = '';
 
-const FacultyGPSPanel = ({ sessionId, institution, onAttendanceMarked }) => {
+const FacultyGPSPanel = ({ sessionId, institution, presentCount, totalCount, onAttendanceMarked }) => {
     const [studentsVerified, setStudentsVerified] = useState(0);
+    const [connected, setConnected] = useState(false);
+    const [loadError, setLoadError] = useState(false);
 
     useEffect(() => {
         if (!sessionId) return undefined;
 
         const socket = io(API_BASE_URL);
         socket.on('connect', () => {
+            setConnected(true);
             socket.emit('join-faculty', sessionId);
         });
+        socket.on('disconnect', () => setConnected(false));
 
         getGpsStats(sessionId)
-            .then((data) => setStudentsVerified(data.count))
-            .catch((err) => console.error('Failed to load GPS stats:', err));
+            .then((data) => {
+                setStudentsVerified(data.count);
+                setLoadError(false);
+            })
+            .catch(() => setLoadError(true));
 
         socket.on('gps-stats', (data) => {
             setStudentsVerified(data.count);
+            setLoadError(false);
         });
 
         if (onAttendanceMarked) {
@@ -34,46 +43,34 @@ const FacultyGPSPanel = ({ sessionId, institution, onAttendanceMarked }) => {
     }, [sessionId]);
 
     return (
-        <div style={styles.container}>
-            <h3 style={styles.title}>GPS — Location Verification</h3>
+        <div className={styles.container}>
+            <div className={styles.header}>
+                <h3>Location check</h3>
+                <span className={styles.conn} role="status">
+                    <span className={`${styles.dot} ${connected ? styles.dotOn : ''}`} />
+                    {connected ? 'Live' : 'Reconnecting…'}
+                </span>
+            </div>
+
             {institution ? (
-                <p style={styles.text}>
+                <p className={styles.text}>
                     Students must be within <strong>{formatDistance(institution.radius_meters)}</strong> of{' '}
                     <strong>{institution.name || 'the institution'}</strong> to continue.
                 </p>
             ) : (
-                <p style={styles.warning}>Institution location is not configured. Ask the admin to set it.</p>
+                <p className={styles.warning} role="alert">
+                    Institution location is not configured. Ask the admin to set it.
+                </p>
             )}
-            <div style={styles.stats}>Students verified via GPS: {studentsVerified}</div>
+
+            {loadError && <p className={styles.error} role="alert">Couldn&apos;t load the location count. It will update live.</p>}
+
+            <div className={styles.stats}>
+                <span><strong>{studentsVerified}</strong> verified by location</span>
+                {totalCount !== undefined && <span><strong>{presentCount}</strong> / {totalCount} present</span>}
+            </div>
         </div>
     );
-};
-
-const styles = {
-    container: {
-        border: '1px solid rgba(56, 189, 248, 0.3)',
-        background: 'rgba(56, 189, 248, 0.06)',
-        borderRadius: '8px',
-        padding: '16px 20px',
-        textAlign: 'center',
-        maxWidth: '400px',
-        margin: '20px auto',
-    },
-    title: {
-        margin: '0 0 10px',
-    },
-    text: {
-        margin: '0 0 10px',
-        color: '#cbd5e1',
-    },
-    warning: {
-        margin: '0 0 10px',
-        color: '#fca5a5',
-    },
-    stats: {
-        fontSize: '0.9em',
-        color: '#94a3b8',
-    },
 };
 
 export default FacultyGPSPanel;

@@ -41,9 +41,9 @@ export default function Admin() {
   const [modalType, setModalType] = useState('');
   const [toast, setToast] = useState(null);
 
-  const [facultyForm, setFacultyForm] = useState({ name: '', code: '' });
-  const [courseForm, setCourseForm] = useState({ name: '', code: '' });
-  const [studentForm, setStudentForm] = useState({ name: '', code: '' });
+  const [facultyForm, setFacultyForm] = useState({ name: '', code: '', section: '' });
+  const [courseForm, setCourseForm] = useState({ name: '', code: '', section: '' });
+  const [studentForm, setStudentForm] = useState({ name: '', code: '', section: '' });
   const [facultyMapForm, setFacultyMapForm] = useState({ courseId: '', facultyId: '' });
   const [studentMapForm, setStudentMapForm] = useState({ courseId: '', studentId: '' });
 
@@ -66,7 +66,7 @@ export default function Admin() {
 
   const resetForms = () => {
     setFacultyForm({ name: '', code: '' });
-    setCourseForm({ name: '', code: '' });
+    setCourseForm({ name: '', code: '', section: '' });
     setStudentForm({ name: '', code: '' });
     setFacultyMapForm({ courseId: '', facultyId: '' });
     setStudentMapForm({ courseId: '', studentId: '' });
@@ -99,7 +99,7 @@ export default function Admin() {
           setToast({ type: 'error', title: 'Validation', message: 'All fields required' });
           return;
         }
-        await createCourse({ name: courseForm.name, courseCode: courseForm.code });
+        await createCourse({ name: courseForm.name, courseCode: courseForm.code, section: courseForm.section });
         setToast({ type: 'success', title: 'Course added', message: courseForm.code });
       }
 
@@ -193,26 +193,6 @@ export default function Admin() {
     }
   };
 
-  const handleRemoveFacultyMapping = async (mappingId) => {
-    try {
-      await unmapFacultyCourse(mappingId);
-      setToast({ type: 'success', title: 'Mapping removed', message: '' });
-      await loadOverview();
-    } catch (error) {
-      setToast({ type: 'error', title: 'Remove failed', message: error.message });
-    }
-  };
-
-  const handleRemoveStudentMapping = async (mappingId) => {
-    try {
-      await unmapStudentCourse(mappingId);
-      setToast({ type: 'success', title: 'Mapping removed', message: '' });
-      await loadOverview();
-    } catch (error) {
-      setToast({ type: 'error', title: 'Remove failed', message: error.message });
-    }
-  };
-
   return (
     <div className={layout.dashboard}>
       <Toast toast={toast} />
@@ -275,10 +255,8 @@ export default function Admin() {
           {activeTab === 'mappings' && (
             <MappingsTab
               overview={overview}
-              onAssignFaculty={() => openModal('mapFaculty')}
-              onEnrollStudent={() => openModal('mapStudent')}
-              onRemoveFacultyMapping={handleRemoveFacultyMapping}
-              onRemoveStudentMapping={handleRemoveStudentMapping}
+              onChanged={loadOverview}
+              notify={setToast}
             />
           )}
 

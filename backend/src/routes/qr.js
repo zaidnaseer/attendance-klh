@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const qrService = require('../services/qrService');
+const { pool } = require('../db/client');
 
 const qrRateLimiter = rateLimit({
     windowMs: 60 * 1000, // 1 minute
@@ -48,8 +49,11 @@ router.get('/current/:sessionId', async (req, res) => {
 router.get('/stats/:sessionId', async (req, res) => {
     try {
         const { sessionId } = req.params;
-        const stats = await qrService.getStats(sessionId);
-        res.json(stats);
+        const { rows } = await pool.query(
+            'SELECT COUNT(*)::int AS verified FROM attendance_records WHERE session_id = $1 AND ble_passed = true',
+            [sessionId],
+        );
+        res.json({ verified: rows[0].verified });
     } catch (error) {
         res.status(500).json({ error: 'Internal server error' });
     }

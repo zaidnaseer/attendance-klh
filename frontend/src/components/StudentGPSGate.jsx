@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { validateGpsLocation } from '../lib/api';
 import { formatDistance, getCurrentPosition } from '../lib/geolocation';
+import styles from './StudentGPSGate.module.css';
 
 function reasonToMessage(result) {
     switch (result.reason) {
@@ -21,7 +22,7 @@ function reasonToMessage(result) {
     }
 }
 
-const StudentGPSGate = ({ sessionId, studentId, step = 1, totalSteps = 2, onPass }) => {
+const StudentGPSGate = ({ sessionId, studentId, onPass }) => {
     const [status, setStatus] = useState('idle'); // idle | locating | checking | passed
     const [error, setError] = useState('');
     const passTimerRef = useRef(null);
@@ -50,62 +51,33 @@ const StudentGPSGate = ({ sessionId, studentId, step = 1, totalSteps = 2, onPass
         setStatus('idle');
     }
 
+    const label = status === 'locating'
+        ? 'Getting your location…'
+        : status === 'checking'
+            ? 'Checking…'
+            : error ? 'Try again' : 'Verify my location';
+
     return (
-        <div style={styles.container}>
-            <h3>Step {step} of {totalSteps} — Verify Location</h3>
-            <p style={styles.text}>
-                Your faculty requires you to be on campus. We will check your device&apos;s location once; it is not tracked afterwards.
+        <div className={styles.container}>
+            <h3 className={styles.title}>Verify your location</h3>
+            <p className={styles.text}>
+                Your faculty requires you to be on campus. We check your device&apos;s location once; it is not tracked afterwards.
             </p>
 
             {status === 'passed' ? (
-                <div style={styles.success}>Location verified ✓</div>
+                <div className={styles.ok} role="status">Location verified ✓</div>
             ) : (
-                <button type="button" style={styles.button} onClick={verifyLocation} disabled={isBusy}>
-                    {status === 'locating' ? 'Getting your location…' : status === 'checking' ? 'Checking…' : 'Verify My Location'}
+                <button type="button" className={styles.submit} onClick={verifyLocation} disabled={isBusy}>
+                    {isBusy && <span className={styles.spinner} aria-hidden="true" />}
+                    {label}
                 </button>
             )}
 
-            {error && <div style={styles.error}>{error}</div>}
+            <div aria-live="polite">
+                {error && <div className={styles.error} role="alert">{error}</div>}
+            </div>
         </div>
     );
-};
-
-const styles = {
-    container: {
-        border: '1px solid #ddd',
-        borderRadius: '8px',
-        padding: '20px',
-        textAlign: 'center',
-        maxWidth: '400px',
-        margin: '20px auto',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-    },
-    text: {
-        fontSize: '0.9em',
-        color: '#94a3b8',
-        margin: '0 0 20px',
-    },
-    button: {
-        width: '80%',
-        padding: '15px',
-        fontSize: '1em',
-        backgroundColor: '#2196F3',
-        color: 'white',
-        border: 'none',
-        borderRadius: '5px',
-        cursor: 'pointer',
-    },
-    success: {
-        color: '#22c55e',
-        fontWeight: 'bold',
-        fontSize: '1.1em',
-        padding: '12px 0',
-    },
-    error: {
-        color: 'red',
-        margin: '14px 0 0',
-        fontWeight: 'bold',
-    },
 };
 
 export default StudentGPSGate;

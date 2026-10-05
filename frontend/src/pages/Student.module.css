@@ -133,3 +133,130 @@
         justify-content: center;
     }
 }
+.headerRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.label {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.error {
+    color: #fecaca;
+    margin: 6px 0 0;
+}
+
+.linkText {
+    background: none;
+    border: 0;
+    padding: 0;
+    color: var(--accent-2);
+    cursor: pointer;
+    font: inherit;
+    text-decoration: underline;
+}
+
+.ghostBtn {
+    background: transparent;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    color: var(--text);
+    border-radius: 12px;
+    padding: 10px 14px;
+    min-height: 44px;
+    cursor: pointer;
+    font: inherit;
+}
+
+.delete {
+    background: rgba(239, 68, 68, 0.15);
+    color: #fecaca;
+}
+
+.courseInfo {
+    flex: 1;
+    min-width: 0;
+}
+
+.history {
+    margin-top: 8px;
+    display: grid;
+    gap: 4px;
+}
+
+.meter {
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.2);
+    overflow: hidden;
+    max-width: 260px;
+}
+
+.meterFill {
+    height: 100%;
+    background: var(--accent);
+}
+
+.meterLow {
+    background: var(--warning);
+}
+
+.stepper {
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0;
+    margin: 18px 0;
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.stepNum {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+}
+
+.stepActive {
+    color: var(--text);
+    font-weight: 600;
+}
+
+.stepActive .stepNum {
+    background: var(--accent-2);
+    color: #020617;
+    border-color: transparent;
+}
+
+.stepDone .stepNum {
+    background: var(--accent);
+    color: #020617;
+    border-color: transparent;
+}
+
+@media (max-width: 760px) {
+    .step span:last-child {
+        display: none;
+    }
+
+    .stepActive span:last-child {
+        display: inline;
+    }
+}

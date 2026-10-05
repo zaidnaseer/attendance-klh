@@ -335,3 +335,103 @@
         padding: 8px 6px;
     }
 }
+
+/* Roster / reports */
+.toolbar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.toolbar .input {
+    flex: 1;
+    min-width: 160px;
+}
+
+.summary {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 10px 12px;
+    margin: 8px 0 12px;
+    border-radius: 12px;
+    background: rgba(34, 197, 94, 0.08);
+    border: 1px solid rgba(34, 197, 94, 0.25);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    backdrop-filter: blur(8px);
+}
+
+.summaryBig {
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.pct {
+    color: var(--muted);
+    font-size: 0.8rem;
+}
+
+.rowActions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.smallBtn {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--panel-border);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.8rem;
+    min-height: 32px;
+}
+
+.smallBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.error {
+    color: #fecaca;
+    margin: 4px 0 0;
+    font-size: 0.9rem;
+}
+
+.label {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.reportRow {
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.reportPresent {
+    background: rgba(34, 197, 94, 0.12);
+    color: #bbf7d0;
+}
+
+.reportAbsent {
+    background: rgba(239, 68, 68, 0.15);
+    color: #fecaca;
+}
+
+@media (max-width: 760px) {
+    .row {
+        flex-wrap: wrap;
+    }
+}

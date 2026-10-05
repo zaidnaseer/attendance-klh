@@ -122,6 +122,18 @@ export default function AdminModal({
                                     }
                                 />
                             </div>
+                            <div className={styles.formGroup}>
+                                <label className={styles.formLabel} htmlFor="course-section">Section (optional)</label>
+                                <input
+                                    id="course-section"
+                                    className={styles.formInput}
+                                    placeholder="A"
+                                    value={courseForm.section || ''}
+                                    onChange={(event) =>
+                                        setCourseForm({ ...courseForm, section: event.target.value })
+                                    }
+                                />
+                            </div>
                         </>
                     )}
 

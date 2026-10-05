@@ -178,3 +178,10 @@ export function validateGpsLocation(payload) {
 export function getGpsStats(sessionId) {
   return request(`/api/gps/stats/${encodeURIComponent(sessionId)}`);
 }
+
+export function setStudentAttendance(facultyCode, courseId, sessionId, studentId, present) {
+  return request(
+    `/api/faculty/${encodeURIComponent(facultyCode)}/courses/${encodeURIComponent(courseId)}/sessions/${encodeURIComponent(sessionId)}/attendance/${encodeURIComponent(studentId)}`,
+    { method: 'PUT', body: JSON.stringify({ present }) },
+  );
+}

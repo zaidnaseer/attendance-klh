@@ -1,27 +1,48 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import io from 'socket.io-client';
+import styles from './StudentGate1.module.css';
 
 const API_BASE_URL = '';
 
-const StudentGate1 = ({ sessionId, studentId, step = 1, totalSteps = 2, onPass }) => {
-    const [mode, setMode] = useState('shortcode'); // 'shortcode' or 'scan'
+const REASON_MESSAGES = {
+    INVALID_TOKEN: "That code isn't right. Check the teacher's screen and try again.",
+    TOKEN_EXPIRED: 'That code just expired. Use the newest one on the teacher\'s screen.',
+    NOT_ENROLLED: "You're not enrolled in this class.",
+};
+
+const StudentGate1 = ({ sessionId, studentId, onPass }) => {
+    const [mode, setMode] = useState('scan');
     const [shortcode, setShortcode] = useState('');
+    const [expiresAt, setExpiresAt] = useState(0);
+    const [secondsRemaining, setSecondsRemaining] = useState(0);
     const [error, setError] = useState('');
+    const [passed, setPassed] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const hasScannedRef = useRef(false);
 
     useEffect(() => {
         const socket = io(API_BASE_URL);
-
-        socket.on('connect', () => {
-            socket.emit('join-session', sessionId);
+        socket.on('connect', () => socket.emit('join-session', sessionId));
+        socket.on('code-rotate', (data) => {
+            if (data.expiresAt > 0) setExpiresAt(data.expiresAt);
         });
 
-        return () => {
-            socket.disconnect();
-        };
+        // Start the countdown immediately instead of waiting for the next rotation.
+        fetch(`${API_BASE_URL}/api/qr/current/${sessionId}`)
+            .then((res) => res.json())
+            .then((data) => data && data.expiresAt && setExpiresAt(data.expiresAt))
+            .catch(() => {});
+
+        return () => socket.disconnect();
     }, [sessionId]);
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setSecondsRemaining(expiresAt > 0 ? Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000)) : 0);
+        }, 250);
+        return () => clearInterval(timer);
+    }, [expiresAt]);
 
     const handleSubmit = async (inputToken) => {
         if (hasScannedRef.current) return;
@@ -33,181 +54,103 @@ const StudentGate1 = ({ sessionId, studentId, step = 1, totalSteps = 2, onPass }
             const response = await fetch(`${API_BASE_URL}/api/qr/validate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token: inputToken, studentId, sessionId })
+                body: JSON.stringify({ token: inputToken, studentId, sessionId }),
             });
-
             const result = await response.json();
 
-            if (result.valid) {
-                onPass();
+            if (result.valid || result.reason === 'ALREADY_PASSED') {
+                setPassed(true);
+                setTimeout(() => onPass(), 700);
+                return;
+            }
+            if (response.status === 429) {
+                setError('Too many attempts. Wait a minute and try again.');
             } else {
-                switch (result.reason) {
-                    case 'INVALID_TOKEN':
-                        setError('Wrong code — try again');
-                        break;
-                    case 'TOKEN_EXPIRED':
-                        setError('Code expired — ask faculty to show new code');
-                        break;
-                    case 'ALREADY_PASSED':
-                        setError('Already verified this session');
-                        // Need a small timeout to let user see message, or just advance
-                        setTimeout(() => onPass(), 1500); 
-                        break;
-                    case 'NOT_ENROLLED':
-                        setError('You are not enrolled in this session course');
-                        break;
-                    default:
-                        setError(result.reason || 'Verification failed');
-                }
+                setError(REASON_MESSAGES[result.reason] || 'Verification failed. Please try again.');
             }
         } catch (err) {
-            setError('Network error connecting to server');
+            setError('Could not reach the server. Check your connection and try again.');
         } finally {
             setIsSubmitting(false);
-            // Allow scanning again after 2 seconds if submission completely fails or gives an error
-            setTimeout(() => {
-                hasScannedRef.current = false;
-            }, 2000);
+            setTimeout(() => { hasScannedRef.current = false; }, 2000);
         }
     };
 
     const handleShortcodeSubmit = (e) => {
         e.preventDefault();
-        if (shortcode.length === 6) {
-            handleSubmit(shortcode);
-        }
+        if (shortcode.length === 6) handleSubmit(shortcode);
     };
 
     return (
-        <div style={styles.container}>
-            <h3>Step {step} of {totalSteps} — Verify Presence</h3>
-
-            <div style={styles.modeToggle}>
-                <button 
-                    style={mode === 'scan' ? styles.activeBtn : styles.inactiveBtn}
-                    onClick={() => setMode('scan')}
-                >
+        <div className={styles.container}>
+            <div className={styles.toggle} role="tablist">
+                <button type="button" role="tab" aria-selected={mode === 'scan'}
+                    className={`${styles.tab} ${mode === 'scan' ? styles.tabActive : ''}`}
+                    onClick={() => { setMode('scan'); setError(''); }}>
                     Scan QR
                 </button>
-                <button 
-                    style={mode === 'shortcode' ? styles.activeBtn : styles.inactiveBtn}
-                    onClick={() => setMode('shortcode')}
-                >
-                    Type Code
+                <button type="button" role="tab" aria-selected={mode === 'shortcode'}
+                    className={`${styles.tab} ${mode === 'shortcode' ? styles.tabActive : ''}`}
+                    onClick={() => { setMode('shortcode'); setError(''); }}>
+                    Type code
                 </button>
             </div>
 
             {mode === 'scan' ? (
-                <div style={styles.scanContainer}>
-                    <Scanner
-                        onScan={(result) => {
-                            if (result && result.length > 0) { 
-                                handleSubmit(result[0].rawValue);
-                            }
-                        }}
-                        onError={(err) => {
-                            if (err) {
-                                console.error(err);
-                                setError("Camera access denied or unsupported. Please accept permissions.");
-                            }
-                        }}
-                        components={{
-                            finder: true
-                        }}
-                    />
-                    <p style={styles.hint}>Point your camera at the faculty's screen</p>
+                <div>
+                    <div className={styles.scanBox}>
+                        <Scanner
+                            onScan={(result) => {
+                                if (result && result.length > 0) handleSubmit(result[0].rawValue);
+                            }}
+                            onError={(err) => {
+                                if (err) {
+                                    console.error(err);
+                                    setError('Camera unavailable. Allow camera access in your browser, or switch to "Type code".');
+                                }
+                            }}
+                            components={{ finder: true }}
+                        />
+                    </div>
+                    <p className={styles.hint}>Point your camera at the QR code on the teacher's screen.</p>
                 </div>
             ) : (
-                <form onSubmit={handleShortcodeSubmit} style={styles.formContainer}>
+                <form onSubmit={handleShortcodeSubmit}>
+                    <label htmlFor="shortcode" className={styles.hint} style={{ display: 'block', marginBottom: 8 }}>
+                        Enter the 6-digit code shown on the teacher's screen
+                    </label>
                     <input
+                        id="shortcode"
                         type="text"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
                         maxLength={6}
-                        placeholder="_ _ _ _ _ _"
+                        placeholder="000000"
+                        aria-label="6-digit attendance code"
                         value={shortcode}
                         onChange={(e) => setShortcode(e.target.value.replace(/\D/g, ''))}
-                        style={styles.input}
-                        disabled={isSubmitting}
+                        className={styles.codeInput}
+                        disabled={isSubmitting || passed}
                     />
-                    <br />
-                    <button type="submit" disabled={shortcode.length !== 6 || isSubmitting} style={styles.submitBtn}>
-                        Verify Presence
+                    <button type="submit" disabled={shortcode.length !== 6 || isSubmitting || passed} className={styles.submit}>
+                        {isSubmitting ? 'Checking…' : 'Continue'}
                     </button>
                 </form>
             )}
 
-            {error && <div style={styles.error}>{error}</div>}
+            {passed && <div className={styles.ok} role="status">Code accepted ✓</div>}
+            {error && <div className={styles.error} role="alert">{error}</div>}
 
+            {expiresAt > 0 && (
+                <div className={styles.footer}>
+                    Code refreshes in {secondsRemaining}s
+                    {secondsRemaining > 0 && secondsRemaining < 5 && (
+                        <span className={styles.warn}> · changing soon, use the new one if it fails</span>
+                    )}
+                </div>
+            )}
         </div>
     );
-};
-
-const styles = {
-    container: {
-        border: '1px solid #ddd',
-        borderRadius: '8px',
-        padding: '20px',
-        textAlign: 'center',
-        maxWidth: '400px',
-        margin: '20px auto',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-    },
-    modeToggle: {
-        display: 'flex',
-        justifyContent: 'space-around',
-        marginBottom: '20px'
-    },
-    activeBtn: {
-        backgroundColor: '#4CAF50',
-        color: 'white',
-        border: 'none',
-        padding: '10px 20px',
-        borderRadius: '5px',
-        cursor: 'pointer'
-    },
-    inactiveBtn: {
-        backgroundColor: '#eee',
-        color: '#333',
-        border: '1px solid #ccc',
-        padding: '10px 20px',
-        borderRadius: '5px',
-        cursor: 'pointer'
-    },
-    scanContainer: {
-        margin: '20px 0'
-    },
-    formContainer: {
-        margin: '20px 0'
-    },
-    input: {
-        fontSize: '2em',
-        letterSpacing: '5px',
-        textAlign: 'center',
-        width: '80%',
-        padding: '10px',
-        borderRadius: '5px',
-        border: '1px solid #ccc'
-    },
-    submitBtn: {
-        marginTop: '20px',
-        width: '80%',
-        padding: '15px',
-        fontSize: '1em',
-        backgroundColor: '#2196F3',
-        color: 'white',
-        border: 'none',
-        borderRadius: '5px',
-        cursor: 'pointer'
-    },
-    error: {
-        color: 'red',
-        margin: '10px 0',
-        fontWeight: 'bold'
-    },
-    hint: {
-        fontSize: '0.8em',
-        color: '#666',
-        marginTop: '10px'
-    }
 };
 
 export default StudentGate1;

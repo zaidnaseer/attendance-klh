@@ -49,6 +49,7 @@ export default function VerifyCameraView({ studentCode, studentName, onVerified 
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
     const [cameraError, setCameraError] = useState('');
+    const [cameraAttempt, setCameraAttempt] = useState(0);
 
     useEffect(() => {
         let mounted = true;
@@ -76,7 +77,7 @@ export default function VerifyCameraView({ studentCode, studentName, onVerified 
                     videoRef.current.srcObject = stream;
                     await videoRef.current.play();
                 }
-                setStatus('Align your face, then tap Verify');
+                setStatus('Fit your face inside the oval, then tap Verify');
             } catch (_error) {
                 console.error("Camera start error:", _error);
                 if (retries < 3) {
@@ -97,7 +98,7 @@ export default function VerifyCameraView({ studentCode, studentName, onVerified 
                 streamRef.current = null;
             }
         };
-    }, []);
+    }, [cameraAttempt]);
 
     const verify = useCallback(async () => {
         if (!videoRef.current || loading) {
@@ -106,7 +107,7 @@ export default function VerifyCameraView({ studentCode, studentName, onVerified 
 
         setLoading(true);
         setResult(null);
-        setStatus('Running RetinaFace, ArcFace and anti-spoofing checks...');
+        setStatus('Checking your face…');
 
         try {
             const blob = await frameToBlob(videoRef.current, canvasRef.current);
@@ -141,20 +142,35 @@ export default function VerifyCameraView({ studentCode, studentName, onVerified 
     }, [result]);
 
     if (cameraError) {
-        return <section className={styles.panel}>{cameraError}</section>;
+        return (
+            <section className={styles.panel} role="alert">
+                <p>{cameraError}</p>
+                <button
+                    type="button"
+                    className={styles.button}
+                    onClick={() => { setCameraError(''); setStatus('Starting camera...'); setCameraAttempt((n) => n + 1); }}
+                >
+                    Try again
+                </button>
+            </section>
+        );
     }
 
     return (
         <section className={styles.panel}>
-            <h2>Verify: {studentName}</h2>
-            <p className={styles.hint}>{status}</p>
+            <p className={styles.hint} role="status">{status}</p>
             <div className={styles.cameraShell}>
                 <video ref={videoRef} className={styles.video} playsInline muted autoPlay />
+                <div className={styles.oval} aria-hidden="true" />
             </div>
+            <ul className={styles.tips}>
+                <li>Face the light, remove hats or masks</li>
+                <li>Only your face should be in the frame</li>
+            </ul>
             <canvas ref={canvasRef} className={styles.hiddenCanvas} />
             <div className={styles.actions}>
                 <button type="button" className={styles.button} onClick={verify} disabled={loading}>
-                    {loading ? 'Verifying...' : 'Verify'}
+                    {loading ? 'Verifying…' : result?.type === 'error' ? 'Try again' : 'Verify'}
                 </button>
             </div>
             {resultCard}

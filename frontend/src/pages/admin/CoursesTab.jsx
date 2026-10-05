@@ -26,7 +26,7 @@ function InlineFacultySelect({ courseId, mappedFaculty, allFaculty, onMapFaculty
 
     const filteredFaculty = allFaculty.filter(f => 
         f.name.toLowerCase().includes(search.toLowerCase()) || 
-        f.employee_id.toLowerCase().includes(search.toLowerCase())
+        f.faculty_code.toLowerCase().includes(search.toLowerCase())
     );
 
     return (
@@ -118,7 +118,7 @@ function InlineFacultySelect({ courseId, mappedFaculty, allFaculty, onMapFaculty
                                 onMouseLeave={e => e.currentTarget.style.backgroundColor = mappedFaculty?.faculty_id === faculty.id ? 'rgba(56, 189, 248, 0.1)' : 'transparent'}
                             >
                                 <div style={{ fontWeight: '500', fontSize: '15px' }}>{faculty.name}</div>
-                                <div style={{ fontSize: '13px', color: '#94a3b8', marginTop: '2px' }}>{faculty.employee_id}</div>
+                                <div style={{ fontSize: '13px', color: '#94a3b8', marginTop: '2px' }}>{faculty.faculty_code}</div>
                             </div>
                         ))}
                         {filteredFaculty.length === 0 && (

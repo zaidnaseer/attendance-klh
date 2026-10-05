@@ -1,142 +1,136 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import io from 'socket.io-client';
+import styles from './FacultyQRPanel.module.css';
 
 const API_BASE_URL = '';
+const ROTATION_SEC = 30;
 
-const FacultyQRPanel = ({ sessionId, isActive, onAttendanceMarked }) => {
-    const [qrData, setQrData] = useState({
-        jwt: '',
-        shortcode: '',
-        round: 0
-    });
-    const [studentsVerified, setStudentsVerified] = useState(0);
+const FacultyQRPanel = ({ sessionId, isActive, presentCount = 0, totalCount = 0, onAttendanceMarked }) => {
+    const [qrData, setQrData] = useState({ jwt: '', shortcode: '', expiresAt: 0, round: 0 });
+    const [secondsRemaining, setSecondsRemaining] = useState(0);
     const [fade, setFade] = useState(false);
+    const [connected, setConnected] = useState(false);
+    const [loadError, setLoadError] = useState(false);
+    const [projector, setProjector] = useState(false);
 
     useEffect(() => {
-        if (!isActive || !sessionId) return;
+        if (!isActive || !sessionId) return undefined;
 
         const socket = io(API_BASE_URL);
-        
         socket.on('connect', () => {
+            setConnected(true);
             socket.emit('join-faculty', sessionId);
         });
+        socket.on('disconnect', () => setConnected(false));
 
-        // Fetch immediate state on mount rather than waiting 30 seconds
         fetch(`${API_BASE_URL}/api/qr/current/${sessionId}`)
             .then((res) => res.json())
             .then((data) => {
                 if (data && data.jwt) {
                     setQrData(data);
+                    setLoadError(false);
+                } else {
+                    setLoadError(true);
                 }
             })
-            .catch((err) => console.error("Failed to load current QR:", err));
+            .catch(() => setLoadError(true));
 
         socket.on('qr-rotate', (data) => {
-            setFade(true); // Start fade out
+            setFade(true);
             setTimeout(() => {
                 setQrData(data);
-                setFade(false); // Fade in
+                setLoadError(false);
+                setFade(false);
             }, 150);
         });
 
-        socket.on('gate1-stats', (data) => {
-            setStudentsVerified(data.count);
-        });
-
         socket.on('attendance-marked', () => {
-            if (onAttendanceMarked) {
-                onAttendanceMarked();
-            }
+            if (onAttendanceMarked) onAttendanceMarked();
         });
 
-        return () => {
-            socket.disconnect();
-        };
+        return () => socket.disconnect();
     }, [sessionId, isActive]);
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            if (qrData.expiresAt > 0) {
+                setSecondsRemaining(Math.max(0, Math.ceil((qrData.expiresAt - Date.now()) / 1000)));
+            }
+        }, 200);
+        return () => clearInterval(timer);
+    }, [qrData]);
+
+    useEffect(() => {
+        if (!projector) return undefined;
+        const onKey = (e) => e.key === 'Escape' && setProjector(false);
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [projector]);
 
     if (!isActive) return null;
 
-    return (
-        <div style={styles.container}>
-            <h3>GATE 1 — Presence Verification</h3>
-            <div style={{ ...styles.qrContainer, opacity: fade ? 0 : 1 }}>
-                {qrData.jwt ? (
-                    <QRCodeSVG 
-                        value={qrData.jwt} 
-                        size={240} 
-                        bgColor="#ffffff" 
-                        fgColor="#000000" 
-                        marginSize={2} 
-                    />
-                ) : (
-                    <div style={styles.placeholder}>Waiting for QR...</div>
-                )}
+    const spacedCode = (qrData.shortcode || '').split('').join(' ');
+    const progress = (
+        <div className={styles.progress} role="progressbar" aria-valuemin={0} aria-valuemax={ROTATION_SEC} aria-valuenow={secondsRemaining} aria-label="Time until code refresh">
+            <div className={styles.bar} style={{ width: `${(secondsRemaining / ROTATION_SEC) * 100}%` }} />
+        </div>
+    );
+
+    if (projector) {
+        return (
+            <div className={styles.overlay} role="dialog" aria-label="Projector view">
+                <button type="button" className={`${styles.projectorBtn} ${styles.close}`} onClick={() => setProjector(false)}>
+                    Exit full screen (Esc)
+                </button>
+                <div className={styles.overlayQr} style={{ opacity: fade ? 0 : 1 }}>
+                    {qrData.jwt && (
+                        <QRCodeSVG value={qrData.jwt} size={Math.min(window.innerHeight * 0.55, window.innerWidth * 0.8)} marginSize={1} />
+                    )}
+                </div>
+                <div className={styles.overlayCode}>{spacedCode || '—'}</div>
+                <div className={styles.overlayProgress}>{progress}</div>
+                <div className={styles.overlayCount}>{presentCount} / {totalCount} present</div>
             </div>
-            
-            <div style={styles.shortcodeContainer}>
-                <span style={styles.label}>Code:</span>
-                <span style={styles.shortcode}>
-                    {qrData.shortcode.split('').join(' ')}
+        );
+    }
+
+    return (
+        <div className={styles.container}>
+            <div className={styles.header}>
+                <h3>Attendance code</h3>
+                <span className={styles.conn} role="status">
+                    <span className={`${styles.dot} ${connected ? styles.dotOn : ''}`} />
+                    {connected ? 'Live' : 'Reconnecting…'}
                 </span>
-                <div style={styles.hint}>(for students without phones)</div>
             </div>
 
-            <div style={styles.statsContainer}>
-                <div>Round #{qrData.round}</div>
-                <div>Students marked via QR: {studentsVerified}</div>
+            <div className={styles.qrBox} style={{ opacity: fade ? 0 : 1 }}>
+                {qrData.jwt ? (
+                    <QRCodeSVG value={qrData.jwt} size={240} marginSize={1} />
+                ) : (
+                    <div className={`${styles.placeholder} ${loadError ? styles.error : ''}`}>
+                        {loadError ? 'Could not load the QR code. It will retry on the next refresh.' : 'Loading QR…'}
+                    </div>
+                )}
+            </div>
+
+            <div className={styles.shortcode} aria-label="Attendance code">{spacedCode}</div>
+            <div className={styles.hint}>Students without a camera can type this code</div>
+
+            {progress}
+            <div className={styles.stats}>
+                <span>Refreshes in {secondsRemaining}s</span>
+                <span>{presentCount} / {totalCount} present</span>
+            </div>
+
+            <div className={styles.actions}>
+                <button type="button" className={styles.projectorBtn} onClick={() => setProjector(true)}>
+                    Show full screen for projector
+                </button>
             </div>
         </div>
     );
-};
-
-const styles = {
-    container: {
-        border: '1px solid #ddd',
-        borderRadius: '8px',
-        padding: '20px',
-        textAlign: 'center',
-        maxWidth: '400px',
-        margin: '20px auto',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-    },
-    qrContainer: {
-        margin: '20px 0',
-        transition: 'opacity 0.15s ease-in-out',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '240px'
-    },
-    placeholder: {
-        color: '#888',
-        fontSize: '1.2em'
-    },
-    shortcodeContainer: {
-        margin: '15px 0'
-    },
-    label: {
-        fontSize: '1em',
-        color: '#555',
-        marginRight: '10px'
-    },
-    shortcode: {
-        fontSize: '2em',
-        fontWeight: 'bold',
-        letterSpacing: '5px'
-    },
-    hint: {
-        fontSize: '0.8em',
-        color: '#666',
-        marginTop: '5px'
-    },
-    statsContainer: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        fontSize: '0.9em',
-        color: '#777',
-        marginTop: '15px'
-    }
 };
 
 export default FacultyQRPanel;

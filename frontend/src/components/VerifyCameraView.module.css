@@ -1,5 +1,5 @@
 .panel {
-    width: min(780px, 92vw);
+    width: 100%;
     background: rgba(7, 15, 28, 0.72);
     border: 1px solid rgba(120, 178, 255, 0.25);
     border-radius: 16px;
@@ -14,6 +14,7 @@
 }
 
 .cameraShell {
+    position: relative;
     border-radius: 14px;
     overflow: hidden;
     border: 1px solid rgba(120, 178, 255, 0.2);
@@ -74,4 +75,24 @@
     display: inline-block;
     margin-top: 6px;
     opacity: 0.9;
+}
+
+.oval {
+    position: absolute;
+    top: 8%;
+    bottom: 8%;
+    left: 50%;
+    aspect-ratio: 3 / 4;
+    transform: translateX(-50%);
+    border: 3px dashed rgba(255, 255, 255, 0.7);
+    border-radius: 50%;
+    box-shadow: 0 0 0 100vmax rgba(2, 9, 21, 0.45);
+    pointer-events: none;
+}
+
+.tips {
+    margin: 12px 0 0;
+    padding-left: 18px;
+    color: #b8c8df;
+    font-size: 0.85rem;
 }

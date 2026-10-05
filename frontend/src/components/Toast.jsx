@@ -19,7 +19,7 @@ export default function Toast({ toast }) {
   }
 
   return (
-    <div className={`${styles.toast} ${styles[toast.type]}`}>
+    <div className={`${styles.toast} ${styles[toast.type]}`} role={toast.type === 'error' ? 'alert' : 'status'}>
       <div className={styles.title}>{toast.title}</div>
       {toast.message ? <div className={styles.message}>{toast.message}</div> : null}
     </div>

@@ -14,7 +14,7 @@ router.get('/overview', async (_req, res) => {
     try {
         const [facultiesResult, coursesResult, studentsResult, courseFacultyResult, courseStudentResult] = await Promise.all([
             pool.query('SELECT id, name, faculty_code, created_at FROM faculties ORDER BY created_at DESC'),
-            pool.query('SELECT id, name, course_code, created_at FROM courses ORDER BY created_at DESC'),
+            pool.query('SELECT id, name, course_code, section, created_at FROM courses ORDER BY created_at DESC'),
             pool.query('SELECT id, name, student_code, enrolled, created_at FROM students ORDER BY created_at DESC'),
             pool.query(
                 `SELECT cf.id, cf.course_id, cf.faculty_id, c.name AS course_name, c.course_code, f.name AS faculty_name, f.faculty_code
@@ -86,7 +86,7 @@ router.delete('/faculties/:facultyCode', async (req, res) => {
 
 router.post('/courses', async (req, res) => {
     try {
-        const { name, courseCode } = req.body || {};
+        const { name, courseCode, section } = req.body || {};
         if (!name || !courseCode) {
             return res.status(400).json({ code: 'VALIDATION_ERROR', message: 'name and courseCode are required' });
         }
@@ -95,8 +95,8 @@ router.post('/courses', async (req, res) => {
         }
 
         const result = await pool.query(
-            'INSERT INTO courses (name, course_code) VALUES ($1, $2) RETURNING id, name, course_code, created_at',
-            [name.trim(), courseCode.trim()],
+            'INSERT INTO courses (name, course_code, section) VALUES ($1, $2, $3) RETURNING id, name, course_code, section, created_at',
+            [name.trim(), courseCode.trim(), (section || '').trim() || null],
         );
 
         return res.status(201).json(result.rows[0]);

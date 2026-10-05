@@ -17,7 +17,7 @@ router.get('/:facultyCode/dashboard', async (req, res) => {
 
         const [coursesResult, allStudentsResult, institution] = await Promise.all([
             pool.query(
-                `SELECT c.id, c.name, c.course_code, c.verification_mode
+                `SELECT c.id, c.name, c.course_code, c.section, c.verification_mode
          FROM course_faculties cf
          JOIN courses c ON c.id = cf.course_id
          WHERE cf.faculty_id = $1
@@ -290,6 +290,64 @@ router.post('/:facultyCode/courses/:courseId/sessions/end', async (req, res) => 
         }
 
         return res.status(200).json({ code: 'SUCCESS', message: 'Session ended successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Unexpected server error' });
+    }
+});
+
+router.put('/:facultyCode/courses/:courseId/sessions/:sessionId/attendance/:studentId', async (req, res) => {
+    try {
+        const { facultyCode, courseId, sessionId, studentId } = req.params;
+        const { present } = req.body || {};
+
+        if (typeof present !== 'boolean') {
+            return res.status(400).json({ code: 'VALIDATION_ERROR', message: 'present (boolean) is required' });
+        }
+
+        const allowedResult = await pool.query(
+            `SELECT cf.id
+       FROM course_faculties cf
+       JOIN faculties f ON f.id = cf.faculty_id
+       WHERE f.faculty_code = $1 AND cf.course_id = $2`,
+            [facultyCode, courseId],
+        );
+        if (!allowedResult.rows[0]) {
+            return res.status(403).json({ code: 'FORBIDDEN', message: 'Faculty is not mapped to this course' });
+        }
+
+        const sessionResult = await pool.query(
+            'SELECT id FROM attendance_sessions WHERE id = $1 AND course_id = $2',
+            [sessionId, courseId],
+        );
+        if (!sessionResult.rows[0]) {
+            return res.status(404).json({ code: 'SESSION_NOT_FOUND', message: 'Session not found for this course' });
+        }
+
+        const inCourse = await pool.query(
+            'SELECT 1 FROM course_students WHERE course_id = $1 AND student_id = $2',
+            [courseId, studentId],
+        );
+        if (!inCourse.rows[0]) {
+            return res.status(404).json({ code: 'NOT_IN_COURSE', message: 'Student is not in this course' });
+        }
+
+        if (present) {
+            await pool.query(
+                `INSERT INTO attendance_records (session_id, student_id, status)
+         VALUES ($1, $2, 'present')
+         ON CONFLICT (session_id, student_id) DO UPDATE SET status = 'present', marked_at = NOW()`,
+                [sessionId, studentId],
+            );
+        } else {
+            await pool.query(
+                'DELETE FROM attendance_records WHERE session_id = $1 AND student_id = $2',
+                [sessionId, studentId],
+            );
+        }
+
+        qrService.emitToFaculty(sessionId, 'attendance-marked', { studentId });
+        return res.json({ code: 'SUCCESS', present });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Unexpected server error' });

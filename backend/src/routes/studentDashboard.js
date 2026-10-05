@@ -23,6 +23,12 @@ router.get('/:studentCode/dashboard', async (req, res) => {
               session.id AS active_session_id,
               session.started_at AS active_session_started_at,
               session.verification_mode AS active_session_verification_mode,
+              (SELECT COUNT(*)::int FROM attendance_sessions ps
+                 WHERE ps.course_id = c.id AND ps.is_active = FALSE) AS total_sessions,
+              (SELECT COUNT(*)::int FROM attendance_sessions ps
+                 JOIN attendance_records pr ON pr.session_id = ps.id
+                 WHERE ps.course_id = c.id AND ps.is_active = FALSE
+                   AND pr.student_id = cs.student_id AND pr.status = 'present') AS attended_sessions,
               CASE WHEN ar.id IS NULL OR ar.status != 'present' THEN FALSE ELSE TRUE END AS is_present    
        FROM course_students cs
        JOIN courses c ON c.id = cs.course_id

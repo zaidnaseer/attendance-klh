@@ -91,7 +91,7 @@ export default function Enroll() {
         studentCode={studentCode} 
         studentName={student.name} 
         onSuccess={(result) => {
-          setToast({ type: 'success', title: 'Success', message: result.code });
+          setToast({ type: 'success', title: 'Success', message: 'Face enrollment complete. Redirecting to your dashboard…' });
           setTimeout(() => navigate('/student'), 3000);
         }} 
       />
