@@ -12,6 +12,7 @@ const adminRouter = require('./routes/admin');
 const facultyRouter = require('./routes/faculty');
 const studentDashboardRouter = require('./routes/studentDashboard');
 const qrRouter = require('./routes/qr');
+const gpsRouter = require('./routes/gps');
 const qrService = require('./services/qrService');
 const { migrate } = require('./db/migrate');
 
@@ -60,6 +61,7 @@ app.use('/api/admin', adminRouter);
 app.use('/api/faculty', facultyRouter);
 app.use('/api/student', studentDashboardRouter);
 app.use('/api/qr', qrRouter);
+app.use('/api/gps', gpsRouter);
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
@@ -85,8 +87,10 @@ const { pool } = require('./db/client');
 async function bootstrap() {
   await migrate();
   
-  // Resume QR rotation for active sessions
-  const activeSessions = await pool.query('SELECT id FROM attendance_sessions WHERE is_active = TRUE');
+  // Resume QR token state for active sessions
+  const activeSessions = await pool.query(
+    "SELECT id FROM attendance_sessions WHERE is_active = TRUE AND verification_mode IN ('qr', 'both')",
+  );
   for (const session of activeSessions.rows) {
     qrService.startSessionRotation(session.id);
   }

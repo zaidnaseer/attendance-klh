@@ -6,10 +6,21 @@ import {
     getFacultyDashboard,
     startAttendanceSession,
     endAttendanceSession,
+    setCourseVerificationMode,
 } from '../lib/api';
 import Toast from '../components/Toast';
 import FacultyQRPanel from '../components/FacultyQRPanel';
+import FacultyGPSPanel from '../components/FacultyGPSPanel';
 import styles from './Faculty.module.css';
+
+const VERIFICATION_OPTIONS = [
+    { value: 'qr', label: 'QR Code' },
+    { value: 'gps', label: 'GPS' },
+    { value: 'both', label: 'QR + GPS' },
+];
+
+const usesQr = (mode) => mode === 'qr' || mode === 'both';
+const usesGps = (mode) => mode === 'gps' || mode === 'both';
 
 export default function Faculty() {
     const [facultyCode, setFacultyCode] = useState('');
@@ -21,6 +32,7 @@ export default function Faculty() {
     const [activeCourseId, setActiveCourseId] = useState(null);
     const [isEditingRoster, setIsEditingRoster] = useState(false);
     const [selectedPastSession, setSelectedPastSession] = useState(null);
+    const [savingModeFor, setSavingModeFor] = useState(null);
     const navigate = useNavigate();
 
     async function loadDashboard(code = activeCode, isInitial = false) {
@@ -99,6 +111,23 @@ export default function Faculty() {
             loadDashboard(activeCode);
         } catch (error) {
             setToast({ type: 'error', title: 'Start session failed', message: error.message });
+        }
+    }
+
+    async function changeVerificationMode(courseId, mode) {
+        if (!activeCode) {
+            return;
+        }
+        setSavingModeFor(courseId);
+        try {
+            await setCourseVerificationMode(activeCode, courseId, mode);
+            const label = VERIFICATION_OPTIONS.find((option) => option.value === mode)?.label;
+            setToast({ type: 'success', title: 'Verification updated', message: `Students will verify using ${label}` });
+            await loadDashboard(activeCode);
+        } catch (error) {
+            setToast({ type: 'error', title: 'Update failed', message: error.message });
+        } finally {
+            setSavingModeFor(null);
         }
     }
 
@@ -193,6 +222,9 @@ export default function Faculty() {
                                     const rosterIds = new Set(course.students.map((student) => student.id));
                                     const available = allStudents.filter((student) => !rosterIds.has(student.id));
                                     const selectedValue = selectedByCourse[course.id] || '';
+                                    const sessionMode = course.activeSession?.verification_mode;
+                                    const displayMode = sessionMode || course.verification_mode || 'qr';
+                                    const gpsConfigured = !!dashboard.institution;
 
                                     return (
                                 <article className={styles.courseCard} key={course.id}>
@@ -245,7 +277,48 @@ export default function Faculty() {
                                     <p className={styles.meta}>
                                         {course.activeSession ? `Active session started at ${new Date(course.activeSession.started_at).toLocaleString()}` : 'No active session'}
                                     </p>
-                                      {course.activeSession && (
+
+                                    <div className={styles.verifyRow}>
+                                        <span className={styles.verifyLabel}>Student verification</span>
+                                        <div className={styles.segmented} role="radiogroup" aria-label="Student verification method">
+                                            {VERIFICATION_OPTIONS.map((option) => {
+                                                const needsGps = usesGps(option.value) && !gpsConfigured;
+                                                const isLocked = !!course.activeSession || savingModeFor === course.id;
+                                                return (
+                                                    <button
+                                                        key={option.value}
+                                                        type="button"
+                                                        role="radio"
+                                                        aria-checked={displayMode === option.value}
+                                                        className={`${styles.segment} ${displayMode === option.value ? styles.segmentActive : ''}`}
+                                                        disabled={isLocked || needsGps}
+                                                        title={needsGps ? 'The admin has not set the institution location yet' : undefined}
+                                                        onClick={() => {
+                                                            if (option.value !== displayMode) {
+                                                                changeVerificationMode(course.id, option.value);
+                                                            }
+                                                        }}
+                                                    >
+                                                        {option.label}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                    {course.activeSession ? (
+                                        <p className={styles.verifyHint}>Locked while a session is active. End the session to change it.</p>
+                                    ) : !gpsConfigured ? (
+                                        <p className={styles.verifyHint}>GPS options are unavailable until the admin sets the institution location.</p>
+                                    ) : null}
+
+                                      {course.activeSession && usesGps(sessionMode) && (
+                                          <FacultyGPSPanel
+                                              sessionId={course.activeSession.id}
+                                              institution={dashboard.institution}
+                                              onAttendanceMarked={usesQr(sessionMode) ? undefined : () => loadDashboard(activeCode)}
+                                          />
+                                      )}
+                                      {course.activeSession && usesQr(sessionMode) && (
                                           <FacultyQRPanel 
                                               sessionId={course.activeSession.id} 
                                               isActive={true} 

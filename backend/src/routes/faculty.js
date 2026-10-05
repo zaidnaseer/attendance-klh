@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../db/client');
 const qrService = require('../services/qrService');
+const { getInstitution, isValidMode, requiresGps, requiresQr } = require('../services/gpsService');
 
 const router = express.Router();
 
@@ -14,9 +15,9 @@ router.get('/:facultyCode/dashboard', async (req, res) => {
             return res.status(404).json({ code: 'FACULTY_NOT_FOUND', message: 'Faculty not found' });
         }
 
-        const [coursesResult, allStudentsResult] = await Promise.all([
+        const [coursesResult, allStudentsResult, institution] = await Promise.all([
             pool.query(
-                `SELECT c.id, c.name, c.course_code
+                `SELECT c.id, c.name, c.course_code, c.verification_mode
          FROM course_faculties cf
          JOIN courses c ON c.id = cf.course_id
          WHERE cf.faculty_id = $1
@@ -24,6 +25,7 @@ router.get('/:facultyCode/dashboard', async (req, res) => {
                 [faculty.id],
             ),
             pool.query('SELECT id, name, student_code, enrolled FROM students ORDER BY student_code'),
+            getInstitution(),
         ]);
 
         const courses = [];
@@ -38,7 +40,7 @@ router.get('/:facultyCode/dashboard', async (req, res) => {
                     [course.id],
                 ),
                 pool.query(
-                    `SELECT id, started_at
+                    `SELECT id, started_at, verification_mode
            FROM attendance_sessions
            WHERE course_id = $1 AND is_active = TRUE
            ORDER BY started_at DESC
@@ -83,6 +85,7 @@ router.get('/:facultyCode/dashboard', async (req, res) => {
             faculty,
             courses,
             allStudents: allStudentsResult.rows,
+            institution,
         });
     } catch (error) {
         console.error(error);
@@ -161,15 +164,53 @@ router.delete('/:facultyCode/courses/:courseId/students/:studentId', async (req,
     }
 });
 
+router.put('/:facultyCode/courses/:courseId/verification-mode', async (req, res) => {
+    try {
+        const { facultyCode, courseId } = req.params;
+        const { mode } = req.body || {};
+
+        if (!isValidMode(mode)) {
+            return res.status(400).json({ code: 'VALIDATION_ERROR', message: 'mode must be one of qr, gps, both' });
+        }
+
+        const allowedResult = await pool.query(
+            `SELECT cf.id
+       FROM course_faculties cf
+       JOIN faculties f ON f.id = cf.faculty_id
+       WHERE f.faculty_code = $1 AND cf.course_id = $2`,
+            [facultyCode, courseId],
+        );
+
+        if (!allowedResult.rows[0]) {
+            return res.status(403).json({ code: 'FORBIDDEN', message: 'Faculty is not mapped to this course' });
+        }
+
+        if (requiresGps(mode) && !(await getInstitution())) {
+            return res.status(409).json({ code: 'GPS_NOT_CONFIGURED', message: 'Institution location has not been set by the admin yet' });
+        }
+
+        const result = await pool.query(
+            'UPDATE courses SET verification_mode = $1 WHERE id = $2 RETURNING id, verification_mode',
+            [mode, courseId],
+        );
+
+        return res.json(result.rows[0]);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Unexpected server error' });
+    }
+});
+
 router.post('/:facultyCode/courses/:courseId/sessions/start', async (req, res) => {
     const client = await pool.connect();
     try {
         const { facultyCode, courseId } = req.params;
 
         const allowedResult = await client.query(
-            `SELECT f.id AS faculty_id
+            `SELECT f.id AS faculty_id, c.verification_mode
        FROM course_faculties cf
        JOIN faculties f ON f.id = cf.faculty_id
+       JOIN courses c ON c.id = cf.course_id
        WHERE f.faculty_code = $1 AND cf.course_id = $2`,
             [facultyCode, courseId],
         );
@@ -177,6 +218,11 @@ router.post('/:facultyCode/courses/:courseId/sessions/start', async (req, res) =
         const allowed = allowedResult.rows[0];
         if (!allowed) {
             return res.status(403).json({ code: 'FORBIDDEN', message: 'Faculty is not mapped to this course' });
+        }
+
+        const mode = allowed.verification_mode;
+        if (requiresGps(mode) && !(await getInstitution(client))) {
+            return res.status(409).json({ code: 'GPS_NOT_CONFIGURED', message: 'GPS verification needs the institution location to be set by the admin' });
         }
 
         await client.query('BEGIN');
@@ -194,13 +240,15 @@ router.post('/:facultyCode/courses/:courseId/sessions/start', async (req, res) =
         }
 
         const startedResult = await client.query(
-            `INSERT INTO attendance_sessions (course_id, started_by_faculty_id, is_active)
-       VALUES ($1, $2, TRUE)
-       RETURNING id, course_id, started_by_faculty_id, started_at, is_active`,  
-            [courseId, allowed.faculty_id],
+            `INSERT INTO attendance_sessions (course_id, started_by_faculty_id, is_active, verification_mode)
+       VALUES ($1, $2, TRUE, $3)
+       RETURNING id, course_id, started_by_faculty_id, started_at, is_active, verification_mode`,
+            [courseId, allowed.faculty_id, mode],
         );
-        
-        qrService.startSessionRotation(startedResult.rows[0].id);
+
+        if (requiresQr(mode)) {
+            qrService.startSessionRotation(startedResult.rows[0].id);
+        }
 
         await client.query('COMMIT');
         return res.status(201).json(startedResult.rows[0]);

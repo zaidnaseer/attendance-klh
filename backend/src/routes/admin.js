@@ -1,7 +1,10 @@
 const express = require('express');
 const { pool } = require('../db/client');
+const { getInstitution, isValidLatitude, isValidLongitude } = require('../services/gpsService');
 
 const router = express.Router();
+const MIN_RADIUS_M = 10;
+const MAX_RADIUS_M = 5000;
 
 function isValidCode(value) {
     return typeof value === 'string' && /^[A-Za-z0-9-]{1,50}$/.test(value);
@@ -153,6 +156,42 @@ router.delete('/course-faculties/:mappingId', async (req, res) => {
             return res.status(404).json({ code: 'MAPPING_NOT_FOUND', message: 'Mapping not found' });
         }
         return res.json({ code: 'SUCCESS', message: 'Mapping removed' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Unexpected server error' });
+    }
+});
+
+router.get('/institution', async (_req, res) => {
+    try {
+        const institution = await getInstitution();
+        return res.json({ institution });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Unexpected server error' });
+    }
+});
+
+router.put('/institution', async (req, res) => {
+    try {
+        const { name, latitude, longitude, radiusMeters } = req.body || {};
+        if (!isValidLatitude(latitude) || !isValidLongitude(longitude)) {
+            return res.status(400).json({ code: 'VALIDATION_ERROR', message: 'Latitude must be between -90 and 90 and longitude between -180 and 180' });
+        }
+        if (!Number.isInteger(radiusMeters) || radiusMeters < MIN_RADIUS_M || radiusMeters > MAX_RADIUS_M) {
+            return res.status(400).json({ code: 'VALIDATION_ERROR', message: `Radius must be a whole number between ${MIN_RADIUS_M} and ${MAX_RADIUS_M} meters` });
+        }
+
+        const result = await pool.query(
+            `INSERT INTO institution_settings (id, name, latitude, longitude, radius_meters, updated_at)
+       VALUES (1, $1, $2, $3, $4, NOW())
+       ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, latitude = EXCLUDED.latitude,
+         longitude = EXCLUDED.longitude, radius_meters = EXCLUDED.radius_meters, updated_at = NOW()
+       RETURNING name, latitude, longitude, radius_meters, updated_at`,
+            [typeof name === 'string' && name.trim() ? name.trim() : null, latitude, longitude, radiusMeters],
+        );
+
+        return res.json({ institution: result.rows[0] });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Unexpected server error' });

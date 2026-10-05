@@ -149,3 +149,32 @@ export function markStudentAttendance(studentCode, sessionId) {
     body: JSON.stringify({ sessionId }),
   });
 }
+
+export function getInstitution() {
+  return request('/api/admin/institution');
+}
+
+export function saveInstitution(payload) {
+  return request('/api/admin/institution', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function setCourseVerificationMode(facultyCode, courseId, mode) {
+  return request(`/api/faculty/${encodeURIComponent(facultyCode)}/courses/${encodeURIComponent(courseId)}/verification-mode`, {
+    method: 'PUT',
+    body: JSON.stringify({ mode }),
+  });
+}
+
+export function validateGpsLocation(payload) {
+  return request('/api/gps/validate', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getGpsStats(sessionId) {
+  return request(`/api/gps/stats/${encodeURIComponent(sessionId)}`);
+}

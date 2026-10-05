@@ -3,8 +3,17 @@ import { Link, useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 import VerifyCameraView from '../components/VerifyCameraView';
 import StudentGate1 from '../components/StudentGate1';
+import StudentGPSGate from '../components/StudentGPSGate';
 import { getStudentDashboard, markStudentAttendance } from '../lib/api';        
 import styles from './Student.module.css';
+
+// Presence checks the student must pass (in order) before face verification
+function getGates(mode) {
+    const gates = [];
+    if (mode === 'gps' || mode === 'both') gates.push('gps');
+    if (mode === 'qr' || mode === 'both') gates.push('qr');
+    return gates;
+}
 
 export default function Student() {
     const navigate = useNavigate();
@@ -12,7 +21,7 @@ export default function Student() {
     const [activeCode, setActiveCode] = useState('');
     const [dashboard, setDashboard] = useState(null);
     const [verifyTarget, setVerifyTarget] = useState(null);
-    const [gate1Passed, setGate1Passed] = useState(false);
+    const [gateIndex, setGateIndex] = useState(0);
     const [toast, setToast] = useState(null);
 
     async function loadDashboard(code = activeCode) {
@@ -114,11 +123,12 @@ export default function Student() {
                                                 className={styles.button}
                                                 type="button"
                                                 onClick={() => {
-                                                    setGate1Passed(false);
+                                                    setGateIndex(0);
                                                     setVerifyTarget({
                                                         sessionId: course.active_session_id,
                                                         courseCode: course.course_code,
-                                                        courseName: course.name,    
+                                                        courseName: course.name,
+                                                        gates: getGates(course.active_session_verification_mode || 'qr'),
                                                     });
                                                 }}
                                             >
@@ -141,11 +151,23 @@ export default function Student() {
                     <h2>Verify for {verifyTarget.courseCode}</h2>
                     <p className={styles.meta}>{verifyTarget.courseName}</p>
                     
-                    {!gate1Passed ? (
+                    {verifyTarget.gates[gateIndex] === 'gps' ? (
+                        <StudentGPSGate
+                            key={`gps-${verifyTarget.sessionId}`}
+                            sessionId={verifyTarget.sessionId}
+                            studentId={dashboard.student.id}
+                            step={gateIndex + 1}
+                            totalSteps={verifyTarget.gates.length + 1}
+                            onPass={() => setGateIndex((index) => index + 1)}
+                        />
+                    ) : verifyTarget.gates[gateIndex] === 'qr' ? (
                         <StudentGate1 
+                            key={`qr-${verifyTarget.sessionId}`}
                             sessionId={verifyTarget.sessionId} 
                             studentId={dashboard.student.id} 
-                            onPass={() => setGate1Passed(true)} 
+                            step={gateIndex + 1}
+                            totalSteps={verifyTarget.gates.length + 1}
+                            onPass={() => setGateIndex((index) => index + 1)} 
                         />
                     ) : (
                         <VerifyCameraView

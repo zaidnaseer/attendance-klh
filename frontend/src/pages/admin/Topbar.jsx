@@ -7,6 +7,7 @@ const titles = {
     students: 'Students',
     courses: 'Courses',
     mappings: 'Course Mappings',
+    location: 'Institution Location',
 };
 
 export default function Topbar({ activeTab, overview }) {

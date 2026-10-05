@@ -6,6 +6,7 @@ const tabs = [
     { id: 'students', label: 'Students', section: 'Management' },
     { id: 'courses', label: 'Courses', section: 'Management' },
     { id: 'mappings', label: 'Mappings', section: 'Mapping' },
+    { id: 'location', label: 'Location', section: 'Settings' },
 ];
 
 export default function Sidebar({ activeTab, setActiveTab }) {

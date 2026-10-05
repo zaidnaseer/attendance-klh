@@ -4,10 +4,9 @@ import io from 'socket.io-client';
 
 const API_BASE_URL = '';
 
-const StudentGate1 = ({ sessionId, studentId, onPass }) => {
+const StudentGate1 = ({ sessionId, studentId, step = 1, totalSteps = 2, onPass }) => {
     const [mode, setMode] = useState('shortcode'); // 'shortcode' or 'scan'
     const [shortcode, setShortcode] = useState('');
-    const [secondsRemaining, setSecondsRemaining] = useState(0);
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const hasScannedRef = useRef(false);
@@ -17,13 +16,6 @@ const StudentGate1 = ({ sessionId, studentId, onPass }) => {
 
         socket.on('connect', () => {
             socket.emit('join-session', sessionId);
-        });
-
-        socket.on('code-rotate', (data) => {
-            if (data.expiresAt > 0) {
-                const remaining = Math.max(0, Math.ceil((data.expiresAt - Date.now()) / 1000));
-                setSecondsRemaining(remaining);
-            }
         });
 
         return () => {
@@ -88,7 +80,7 @@ const StudentGate1 = ({ sessionId, studentId, onPass }) => {
 
     return (
         <div style={styles.container}>
-            <h3>Step 1 of 2 — Verify Presence</h3>
+            <h3>Step {step} of {totalSteps} — Verify Presence</h3>
 
             <div style={styles.modeToggle}>
                 <button 
@@ -145,10 +137,6 @@ const StudentGate1 = ({ sessionId, studentId, onPass }) => {
 
             {error && <div style={styles.error}>{error}</div>}
 
-            <div style={styles.footer}>
-                <div>Code refreshes in {secondsRemaining}s</div>
-                {secondsRemaining < 3 && <div style={{ color: 'red' }}>⚠ Code changes — type fast</div>}
-            </div>
         </div>
     );
 };
@@ -214,11 +202,6 @@ const styles = {
         color: 'red',
         margin: '10px 0',
         fontWeight: 'bold'
-    },
-    footer: {
-        marginTop: '20px',
-        fontSize: '0.9em',
-        color: '#666'
     },
     hint: {
         fontSize: '0.8em',

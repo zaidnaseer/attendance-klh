@@ -18,6 +18,7 @@ import {
   AdminModal,
   CoursesTab,
   FacultyTab,
+  LocationTab,
   MappingsTab,
   OverviewTab,
   Sidebar,
@@ -280,6 +281,8 @@ export default function Admin() {
               onRemoveStudentMapping={handleRemoveStudentMapping}
             />
           )}
+
+          {activeTab === 'location' && <LocationTab setToast={setToast} />}
         </div>
       </div>
 

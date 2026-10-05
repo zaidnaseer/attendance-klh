@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0 --port 3000",
+    "dev": "vite & HTTPS=true vite; wait",
+    "dev:http": "vite",
+    "dev:https": "HTTPS=true vite",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0 --port 3000"
   },

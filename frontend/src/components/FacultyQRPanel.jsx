@@ -8,10 +8,8 @@ const FacultyQRPanel = ({ sessionId, isActive, onAttendanceMarked }) => {
     const [qrData, setQrData] = useState({
         jwt: '',
         shortcode: '',
-        expiresAt: 0,
         round: 0
     });
-    const [secondsRemaining, setSecondsRemaining] = useState(0);
     const [studentsVerified, setStudentsVerified] = useState(0);
     const [fade, setFade] = useState(false);
 
@@ -57,16 +55,6 @@ const FacultyQRPanel = ({ sessionId, isActive, onAttendanceMarked }) => {
         };
     }, [sessionId, isActive]);
 
-    useEffect(() => {
-        const timer = setInterval(() => {
-            if (qrData.expiresAt > 0) {
-                const remaining = Math.max(0, Math.ceil((qrData.expiresAt - Date.now()) / 1000));
-                setSecondsRemaining(remaining);
-            }
-        }, 100);
-        return () => clearInterval(timer);
-    }, [qrData]);
-
     if (!isActive) return null;
 
     return (
@@ -94,16 +82,6 @@ const FacultyQRPanel = ({ sessionId, isActive, onAttendanceMarked }) => {
                 <div style={styles.hint}>(for students without phones)</div>
             </div>
 
-            <div style={styles.progressContainer}>
-                <div 
-                    style={{ 
-                        ...styles.progressBar, 
-                        width: `${(secondsRemaining / 30) * 100}%` 
-                    }} 
-                />
-                <span style={styles.progressText}>Refreshes in {secondsRemaining}s</span>
-            </div>
-            
             <div style={styles.statsContainer}>
                 <div>Round #{qrData.round}</div>
                 <div>Students marked via QR: {studentsVerified}</div>
@@ -151,27 +129,6 @@ const styles = {
         fontSize: '0.8em',
         color: '#666',
         marginTop: '5px'
-    },
-    progressContainer: {
-        margin: '20px 0',
-        height: '20px',
-        backgroundColor: '#eee',
-        borderRadius: '10px',
-        overflow: 'hidden',
-        position: 'relative'
-    },
-    progressBar: {
-        height: '100%',
-        backgroundColor: '#4CAF50',
-        transition: 'width 0.1s linear'
-    },
-    progressText: {
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        fontSize: '0.8em',
-        color: '#333'
     },
     statsContainer: {
         display: 'flex',

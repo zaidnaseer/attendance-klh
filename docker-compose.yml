@@ -60,6 +60,7 @@ services:
       VITE_API_BASE_URL: http://10.232.2.237:4000
     ports:
       - "3000:3000"
+      - "3443:3443"
     depends_on:
       backend:
         condition: service_started

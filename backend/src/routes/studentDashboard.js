@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../db/client');
 const qrService = require('../services/qrService');
+const { requiresGps, requiresQr } = require('../services/gpsService');
 
 const router = express.Router();
 
@@ -21,11 +22,12 @@ router.get('/:studentCode/dashboard', async (req, res) => {
             `SELECT c.id, c.name, c.course_code,
               session.id AS active_session_id,
               session.started_at AS active_session_started_at,
+              session.verification_mode AS active_session_verification_mode,
               CASE WHEN ar.id IS NULL OR ar.status != 'present' THEN FALSE ELSE TRUE END AS is_present    
        FROM course_students cs
        JOIN courses c ON c.id = cs.course_id
        LEFT JOIN LATERAL (
-         SELECT id, started_at
+         SELECT id, started_at, verification_mode
          FROM attendance_sessions
          WHERE course_id = c.id AND is_active = TRUE
          ORDER BY started_at DESC
@@ -72,7 +74,7 @@ router.post('/:studentCode/attendance/mark', async (req, res) => {
         }
 
         const sessionResult = await pool.query(
-            `SELECT s.id, s.course_id, s.is_active
+            `SELECT s.id, s.course_id, s.is_active, s.verification_mode
        FROM attendance_sessions s
        WHERE s.id = $1`,
             [sessionId],
@@ -94,6 +96,19 @@ router.post('/:studentCode/attendance/mark', async (req, res) => {
 
         if (!inCourseResult.rows[0]) {
             return res.status(403).json({ code: 'NOT_IN_COURSE', message: 'Student is not assigned to this course' });
+        }
+
+        // Enforce the faculty-selected presence checks server-side
+        const gatesResult = await pool.query(
+            'SELECT ble_passed, gps_passed FROM attendance_records WHERE session_id = $1 AND student_id = $2',
+            [sessionId, student.id],
+        );
+        const gates = gatesResult.rows[0] || {};
+        if (requiresQr(session.verification_mode) && !gates.ble_passed) {
+            return res.status(403).json({ code: 'QR_NOT_VERIFIED', message: 'QR code verification is required before marking attendance' });
+        }
+        if (requiresGps(session.verification_mode) && !gates.gps_passed) {
+            return res.status(403).json({ code: 'GPS_NOT_VERIFIED', message: 'Location verification is required before marking attendance' });
         }
 
         const result = await pool.query(

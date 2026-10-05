@@ -5,5 +5,6 @@ export { default as FacultyTab } from './FacultyTab';
 export { default as StudentsTab } from './StudentsTab';
 export { default as CoursesTab } from './CoursesTab';
 export { default as MappingsTab } from './MappingsTab';
+export { default as LocationTab } from './LocationTab';
 export { default as AdminModal } from './AdminModal';
 export { getInitials, getAvatarStyle } from './utils';
