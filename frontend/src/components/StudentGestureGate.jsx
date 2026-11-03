@@ -110,7 +110,7 @@ const StudentGestureGate = ({ sessionId, studentId, onPass }) => {
         runRef.current = runId;
 
         try {
-            const issued = await requestGestureChallenge({ studentId, sessionId });
+            const issued = await requestGestureChallenge({ studentId, sessionId, debug: showDebug });
             if (runRef.current !== runId) return;
 
             const stream = await navigator.mediaDevices.getUserMedia({
@@ -158,6 +158,8 @@ const StudentGestureGate = ({ sessionId, studentId, onPass }) => {
                 const features = extractFeatures(result);
                 const entry = { t: Math.round(now - t0), ...features };
                 trace.push(entry);
+                // Debug mode has no practical time limit, so keep only the most recent frames.
+                if (trace.length > MAX_TRACE_FRAMES) trace.shift();
 
                 if (debugRef.current) {
                     const n = trace.length;
@@ -169,7 +171,7 @@ const StudentGestureGate = ({ sessionId, studentId, onPass }) => {
                 if (tracker.push(entry)) {
                     setProgress({ index: tracker.index, cycles: tracker.cycles });
                 }
-                if (tracker.status !== 'running' || trace.length >= MAX_TRACE_FRAMES) {
+                if (tracker.status !== 'running' || (!showDebug && trace.length >= MAX_TRACE_FRAMES)) {
                     const elapsed = (trace[trace.length - 1].t - trace[0].t) / 1000;
                     submitRef.current(challenge, trace, elapsed > 0 ? trace.length / elapsed : 0);
                     return;
@@ -207,12 +209,12 @@ const StudentGestureGate = ({ sessionId, studentId, onPass }) => {
                             {current.label}
                             {current.reps > 1 ? ` (${progress.cycles}/${current.reps})` : ''}
                         </div>
-                        <div
+                        {!showDebug && <div
                             key={`${progress.index}`}
                             className={styles.timer}
                             style={{ animationDuration: `${challenge.timeLimitMs}ms` }}
                             aria-hidden="true"
-                        />
+                        />}
                     </>
                 ) : null}
             </div>

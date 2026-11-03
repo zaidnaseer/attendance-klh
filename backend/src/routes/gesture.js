@@ -12,12 +12,12 @@ const gestureRateLimiter = rateLimit({
 
 router.post('/challenge', gestureRateLimiter, async (req, res) => {
     try {
-        const { studentId, sessionId } = req.body || {};
+        const { studentId, sessionId, debug } = req.body || {};
         if (!studentId || !sessionId) {
             return res.status(400).json({ error: 'Missing required parameters.' });
         }
 
-        const issued = await gestureService.issueChallenge({ studentId, sessionId });
+        const issued = await gestureService.issueChallenge({ studentId, sessionId, debug: debug === true });
         if (!issued.ok) {
             return res.status(409).json({ reason: issued.reason });
         }

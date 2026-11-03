@@ -56,6 +56,7 @@ const MAX_MULTI_FACE_RATIO = 0.05;
 const CLOCK_TOLERANCE_MS = 2000;
 const START_GRACE_MS = 20000; // camera start-up + reading the prompt
 const SUBMIT_GRACE_MS = 5000;
+const DEBUG_TIME_LIMIT_MS = 300000; // ?debug=1 on the client; never honoured in production
 
 function envNumber(name, fallback, { min = 0, max = Infinity, integer = false } = {}) {
     const parsed = Number(process.env[name]);
@@ -257,7 +258,7 @@ async function checkEligibility(studentId, sessionId) {
     return { session };
 }
 
-async function issueChallenge({ studentId, sessionId }) {
+async function issueChallenge({ studentId, sessionId, debug = false }) {
     const eligibility = await checkEligibility(studentId, sessionId);
     if (eligibility.error) return { ok: false, reason: eligibility.error };
 
@@ -269,6 +270,11 @@ async function issueChallenge({ studentId, sessionId }) {
     );
 
     const config = getConfig();
+    const debugMode = Boolean(debug) && process.env.NODE_ENV !== 'production';
+    if (debugMode) {
+        config.timeLimitMs = DEBUG_TIME_LIMIT_MS;
+        config.debug = true; // flagged so these attempts can be excluded from evaluation
+    }
     const gestures = pickGestures(config.count);
     const expiresAt = new Date(Date.now() + START_GRACE_MS + config.count * config.timeLimitMs + SUBMIT_GRACE_MS);
     const thresholds = thresholdsFor(gestures);
