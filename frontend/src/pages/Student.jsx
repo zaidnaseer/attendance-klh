@@ -4,16 +4,18 @@ import Toast from '../components/Toast';
 import VerifyCameraView from '../components/VerifyCameraView';
 import StudentGate1 from '../components/StudentGate1';
 import StudentGPSGate from '../components/StudentGPSGate';
+import StudentGestureGate from '../components/StudentGestureGate';
 import { getStudentDashboard, markStudentAttendance } from '../lib/api';
 import styles from './Student.module.css';
 
-const GATE_LABELS = { gps: 'Verify location', qr: 'Scan code' };
+const GATE_LABELS = { gps: 'Verify location', qr: 'Scan code', gesture: 'Liveness check' };
 
 // Presence checks the student must pass (in order) before face verification
-function getGates(mode) {
+function getGates(mode, gestureRequired = false) {
     const gates = [];
     if (mode === 'gps' || mode === 'both') gates.push('gps');
     if (mode === 'qr' || mode === 'both') gates.push('qr');
+    if (gestureRequired) gates.push('gesture');
     return gates;
 }
 
@@ -207,8 +209,8 @@ export default function Student() {
                                             )}
                                             {course.active_session_id && !course.is_present && (
                                                 <p className={styles.meta}>
-                                                    Requires: {getGates(course.active_session_verification_mode || 'qr')
-                                                        .map((g) => (g === 'gps' ? 'Location' : 'QR code'))
+                                                    Requires: {getGates(course.active_session_verification_mode || 'qr', course.active_session_gesture_required)
+                                                        .map((g) => ({ gps: 'Location', qr: 'QR code', gesture: 'Liveness gesture' }[g]))
                                                         .concat('Face check')
                                                         .join(' → ')}
                                                 </p>
@@ -227,7 +229,7 @@ export default function Student() {
                                                             sessionId: course.active_session_id,
                                                             courseCode: course.course_code,
                                                             courseName: course.name,
-                                                            gates: getGates(course.active_session_verification_mode || 'qr'),
+                                                            gates: getGates(course.active_session_verification_mode || 'qr', course.active_session_gesture_required),
                                                         });
                                                     }}
                                                 >
@@ -268,6 +270,13 @@ export default function Student() {
                     ) : currentGate === 'qr' ? (
                         <StudentGate1
                             key={`qr-${verifyTarget.sessionId}`}
+                            sessionId={verifyTarget.sessionId}
+                            studentId={dashboard.student.id}
+                            onPass={() => setGateIndex((index) => index + 1)}
+                        />
+                    ) : currentGate === 'gesture' ? (
+                        <StudentGestureGate
+                            key={`gesture-${verifyTarget.sessionId}`}
                             sessionId={verifyTarget.sessionId}
                             studentId={dashboard.student.id}
                             onPass={() => setGateIndex((index) => index + 1)}

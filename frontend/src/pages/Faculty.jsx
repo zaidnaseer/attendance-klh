@@ -7,6 +7,7 @@ import {
     startAttendanceSession,
     endAttendanceSession,
     setCourseVerificationMode,
+    setCourseGestureRequired,
     setStudentAttendance,
 } from '../lib/api';
 import Toast from '../components/Toast';
@@ -153,6 +154,26 @@ export default function Faculty() {
         }
     }
 
+    async function changeGestureRequired(courseId, required) {
+        if (!activeCode) {
+            return;
+        }
+        setSavingModeFor(courseId);
+        try {
+            await setCourseGestureRequired(activeCode, courseId, required);
+            setToast({
+                type: 'success',
+                title: 'Verification updated',
+                message: required ? 'Students will also complete a liveness gesture check' : 'Liveness gesture check turned off',
+            });
+            await loadDashboard(activeCode);
+        } catch (error) {
+            setToast({ type: 'error', title: 'Update failed', message: error.message });
+        } finally {
+            setSavingModeFor(null);
+        }
+    }
+
     async function endSession(courseId) {
         if (!activeCode) {
             return;
@@ -191,6 +212,7 @@ export default function Faculty() {
         removeStudent,
         confirm: setConfirm,
         changeVerificationMode,
+        changeGestureRequired,
         refresh: () => loadDashboard(activeCode),
     };
 

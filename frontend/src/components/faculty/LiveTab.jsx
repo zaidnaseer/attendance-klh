@@ -7,6 +7,7 @@ import styles from './Faculty.parts.module.css';
 function VerificationPicker({ course, actions, institution, locked, saving }) {
     const mode = course.activeSession?.verification_mode || course.verification_mode || 'qr';
     const gpsConfigured = !!institution;
+    const gestureRequired = course.activeSession ? !!course.activeSession.gesture_required : !!course.gesture_required;
     return (
         <>
             <div className={styles.verifyRow}>
@@ -30,6 +31,18 @@ function VerificationPicker({ course, actions, institution, locked, saving }) {
                         );
                     })}
                 </div>
+            </div>
+            <div className={styles.verifyRow}>
+                <span className={styles.verifyLabel}>Liveness gesture</span>
+                <label className={styles.toggle}>
+                    <input
+                        type="checkbox"
+                        checked={gestureRequired}
+                        disabled={locked || saving}
+                        onChange={(event) => actions.changeGestureRequired(course.id, event.target.checked)}
+                    />
+                    <span>Require students to blink, smile or turn their head (optional, on top of the selected method)</span>
+                </label>
             </div>
             {locked ? (
                 <p className={styles.verifyHint}>Locked while a session is active. End the session to change it.</p>
@@ -74,7 +87,7 @@ export default function LiveTab({ course, actions, institution, savingMode }) {
     return (
         <div className={styles.stack}>
             <div className={styles.row2}>
-                <span className={styles.live}><span className={styles.liveDot} />Session live · started {started} · {VERIFICATION_OPTIONS.find((o) => o.value === session.verification_mode)?.label || 'QR Code'}</span>
+                <span className={styles.live}><span className={styles.liveDot} />Session live · started {started} · {VERIFICATION_OPTIONS.find((o) => o.value === session.verification_mode)?.label || 'QR Code'}{session.gesture_required ? ' + Gesture' : ''}</span>
                 <button
                     type="button"
                     className={`${styles.btn} ${styles.btnDanger}`}

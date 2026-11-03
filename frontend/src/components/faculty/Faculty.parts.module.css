@@ -372,6 +372,9 @@ button.chip { cursor: pointer; min-height: 36px; padding: 6px 12px; }
 /* ---------- verification method picker ---------- */
 .verifyRow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 4px 0 6px; }
 .verifyLabel { color: var(--muted); font-size: 0.9rem; font-weight: 600; }
+.toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; cursor: pointer; }
+.toggle input { width: 16px; height: 16px; accent-color: #22c55e; }
+.toggle input:disabled { cursor: not-allowed; }
 .verifyHint { margin: 0 0 8px; font-size: 0.85rem; color: var(--muted); }
 
 .segmented {
