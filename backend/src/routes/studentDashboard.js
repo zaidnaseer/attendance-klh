@@ -23,6 +23,7 @@ router.get('/:studentCode/dashboard', async (req, res) => {
               session.id AS active_session_id,
               session.started_at AS active_session_started_at,
               session.verification_mode AS active_session_verification_mode,
+              session.gesture_required AS active_session_gesture_required,
               (SELECT COUNT(*)::int FROM attendance_sessions ps
                  WHERE ps.course_id = c.id AND ps.is_active = FALSE) AS total_sessions,
               (SELECT COUNT(*)::int FROM attendance_sessions ps
@@ -33,7 +34,7 @@ router.get('/:studentCode/dashboard', async (req, res) => {
        FROM course_students cs
        JOIN courses c ON c.id = cs.course_id
        LEFT JOIN LATERAL (
-         SELECT id, started_at, verification_mode
+         SELECT id, started_at, verification_mode, gesture_required
          FROM attendance_sessions
          WHERE course_id = c.id AND is_active = TRUE
          ORDER BY started_at DESC
@@ -80,7 +81,7 @@ router.post('/:studentCode/attendance/mark', async (req, res) => {
         }
 
         const sessionResult = await pool.query(
-            `SELECT s.id, s.course_id, s.is_active, s.verification_mode
+            `SELECT s.id, s.course_id, s.is_active, s.verification_mode, s.gesture_required
        FROM attendance_sessions s
        WHERE s.id = $1`,
             [sessionId],
@@ -106,7 +107,7 @@ router.post('/:studentCode/attendance/mark', async (req, res) => {
 
         // Enforce the faculty-selected presence checks server-side
         const gatesResult = await pool.query(
-            'SELECT ble_passed, gps_passed FROM attendance_records WHERE session_id = $1 AND student_id = $2',
+            'SELECT ble_passed, gps_passed, gesture_passed FROM attendance_records WHERE session_id = $1 AND student_id = $2',
             [sessionId, student.id],
         );
         const gates = gatesResult.rows[0] || {};
@@ -115,6 +116,9 @@ router.post('/:studentCode/attendance/mark', async (req, res) => {
         }
         if (requiresGps(session.verification_mode) && !gates.gps_passed) {
             return res.status(403).json({ code: 'GPS_NOT_VERIFIED', message: 'Location verification is required before marking attendance' });
+        }
+        if (session.gesture_required && !gates.gesture_passed) {
+            return res.status(403).json({ code: 'GESTURE_NOT_VERIFIED', message: 'Liveness gesture check is required before marking attendance' });
         }
 
         const result = await pool.query(

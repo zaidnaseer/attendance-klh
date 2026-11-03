@@ -17,7 +17,7 @@ router.get('/:facultyCode/dashboard', async (req, res) => {
 
         const [coursesResult, allStudentsResult, institution] = await Promise.all([
             pool.query(
-                `SELECT c.id, c.name, c.course_code, c.section, c.verification_mode
+                `SELECT c.id, c.name, c.course_code, c.section, c.verification_mode, c.gesture_required
          FROM course_faculties cf
          JOIN courses c ON c.id = cf.course_id
          WHERE cf.faculty_id = $1
@@ -40,7 +40,7 @@ router.get('/:facultyCode/dashboard', async (req, res) => {
                     [course.id],
                 ),
                 pool.query(
-                    `SELECT id, started_at, verification_mode
+                    `SELECT id, started_at, verification_mode, gesture_required
            FROM attendance_sessions
            WHERE course_id = $1 AND is_active = TRUE
            ORDER BY started_at DESC
@@ -201,13 +201,46 @@ router.put('/:facultyCode/courses/:courseId/verification-mode', async (req, res)
     }
 });
 
+router.put('/:facultyCode/courses/:courseId/gesture-required', async (req, res) => {
+    try {
+        const { facultyCode, courseId } = req.params;
+        const { required } = req.body || {};
+
+        if (typeof required !== 'boolean') {
+            return res.status(400).json({ code: 'VALIDATION_ERROR', message: 'required (boolean) is required' });
+        }
+
+        const allowedResult = await pool.query(
+            `SELECT cf.id
+       FROM course_faculties cf
+       JOIN faculties f ON f.id = cf.faculty_id
+       WHERE f.faculty_code = $1 AND cf.course_id = $2`,
+            [facultyCode, courseId],
+        );
+
+        if (!allowedResult.rows[0]) {
+            return res.status(403).json({ code: 'FORBIDDEN', message: 'Faculty is not mapped to this course' });
+        }
+
+        const result = await pool.query(
+            'UPDATE courses SET gesture_required = $1 WHERE id = $2 RETURNING id, gesture_required',
+            [required, courseId],
+        );
+
+        return res.json(result.rows[0]);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ code: 'INTERNAL_ERROR', message: 'Unexpected server error' });
+    }
+});
+
 router.post('/:facultyCode/courses/:courseId/sessions/start', async (req, res) => {
     const client = await pool.connect();
     try {
         const { facultyCode, courseId } = req.params;
 
         const allowedResult = await client.query(
-            `SELECT f.id AS faculty_id, c.verification_mode
+            `SELECT f.id AS faculty_id, c.verification_mode, c.gesture_required
        FROM course_faculties cf
        JOIN faculties f ON f.id = cf.faculty_id
        JOIN courses c ON c.id = cf.course_id
@@ -240,10 +273,10 @@ router.post('/:facultyCode/courses/:courseId/sessions/start', async (req, res) =
         }
 
         const startedResult = await client.query(
-            `INSERT INTO attendance_sessions (course_id, started_by_faculty_id, is_active, verification_mode)
-       VALUES ($1, $2, TRUE, $3)
-       RETURNING id, course_id, started_by_faculty_id, started_at, is_active, verification_mode`,
-            [courseId, allowed.faculty_id, mode],
+            `INSERT INTO attendance_sessions (course_id, started_by_faculty_id, is_active, verification_mode, gesture_required)
+       VALUES ($1, $2, TRUE, $3, $4)
+       RETURNING id, course_id, started_by_faculty_id, started_at, is_active, verification_mode, gesture_required`,
+            [courseId, allowed.faculty_id, mode, allowed.gesture_required],
         );
 
         if (requiresQr(mode)) {
