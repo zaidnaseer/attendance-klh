@@ -29,11 +29,11 @@ const GESTURES = {
     },
     smile: {
         label: 'Smile',
-        signal: 'smile', direction: 1, activeAt: 0.5, neutralAt: 0.25, minActiveMs: 300, reps: 1,
+        signal: 'smile', direction: 1, activeAt: 0.3, neutralAt: 0.15, minActiveMs: 300, reps: 1,
     },
     mouth_open: {
         label: 'Open your mouth',
-        signal: 'jaw', direction: 1, activeAt: 0.5, neutralAt: 0.2, minActiveMs: 300, reps: 1,
+        signal: 'jaw', direction: 1, activeAt: 0.3, neutralAt: 0.15, minActiveMs: 300, reps: 1,
     },
     turn_left: {
         label: 'Turn your head to your left',
@@ -66,7 +66,7 @@ function envNumber(name, fallback, { min = 0, max = Infinity, integer = false } 
 function getConfig() {
     return {
         count: envNumber('GESTURE_COUNT', 2, { min: 1, max: GESTURE_IDS.length, integer: true }),
-        timeLimitMs: envNumber('GESTURE_TIME_LIMIT_MS', 8000, { min: 2000, max: 30000, integer: true }),
+        timeLimitMs: envNumber('GESTURE_TIME_LIMIT_MS', 12000, { min: 2000, max: 30000, integer: true }),
     };
 }
 
