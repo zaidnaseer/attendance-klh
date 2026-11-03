@@ -9,10 +9,18 @@ const MIN_FACE_WIDTH_RATIO = 0.26;
 const MIN_FACE_AREA_RATIO = 0.09;
 const CENTER_MARGIN_X = 0.13;
 const CENTER_MARGIN_Y = 0.13;
-const UP_DOWN_PITCH_MIN_DELTA = 0.07;
-const UP_DOWN_PITCH_MAX_DELTA = 0.34;
-const LEFT_RIGHT_YAW_MIN_THRESHOLD = 0.085;
-const LEFT_RIGHT_YAW_MAX_THRESHOLD = 0.18;
+// Pitch is measured relative to the user's own front-pose baseline. Wide band, same reasoning as yaw below.
+const UP_DOWN_PITCH_MIN_DELTA = 0.045;
+const UP_DOWN_PITCH_MAX_DELTA = 0.7;
+// Yaw is the nose offset from the eye midpoint, relative to face-box width (~0 when facing the camera).
+// The accepted band is deliberately wide: users turn by very different amounts, and the box/keypoints
+// get noisy near profile, so only reject turns that are too small or so extreme the face is unusable.
+const LEFT_RIGHT_YAW_MIN_THRESHOLD = 0.06;
+const LEFT_RIGHT_YAW_MAX_THRESHOLD = 0.5;
+const YAW_SMOOTHING = 0.5;
+// A pose stays "held" through brief failed frames (detector jitter) instead of restarting the hold timer.
+const STEADY_GRACE_MS = 350;
+const STEADY_HOLD_MS = 1200;
 const poseMessages = {
   front: 'Look straight at the camera',
   left: 'Turn your head slightly to the left',
@@ -94,7 +102,7 @@ function drawOverlay(ctx, video, detection, passing, steadyTimer, flashUntil, no
   if (passing && steadyTimer > 0) {
     ctx.strokeStyle = '#22c55e';
     ctx.beginPath();
-    ctx.arc(x + width - 16, y + 16, 12, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * (steadyTimer / 1500));
+    ctx.arc(x + width - 16, y + 16, 12, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * Math.min(1, steadyTimer / STEADY_HOLD_MS));
     ctx.lineWidth = 3;
     ctx.stroke();
   }
@@ -150,6 +158,8 @@ export default function CameraView({ studentCode, studentName, onSuccess }) {
   const neutralPitchRef = useRef(null);
   const poseStartPitchRef = useRef(null);
   const smoothedPitchRef = useRef(null);
+  const smoothedYawRef = useRef(null);
+  const lastPassingTimeRef = useRef(0);
   const activePoseRef = useRef(POSES[0]);
   const currentPoseIndexRef = useRef(0);
   const capturedBlobsRef = useRef(new Array(POSES.length).fill(null));
@@ -173,6 +183,8 @@ export default function CameraView({ studentCode, studentName, onSuccess }) {
     activePoseRef.current = POSES[poseIndex] || POSES[0];
     poseStartPitchRef.current = null;
     smoothedPitchRef.current = null;
+    smoothedYawRef.current = null;
+    lastPassingTimeRef.current = 0;
     if (poseIndex === 0) {
       neutralPitchRef.current = null;
     }
@@ -324,10 +336,13 @@ export default function CameraView({ studentCode, studentName, onSuccess }) {
               if (keypoints.length >= 6) {
                 const eyeMidX = (keypoints[0].x + keypoints[1].x) / 2;
                 const eyeMidY = (keypoints[0].y + keypoints[1].y) / 2;
-                const yaw = (keypoints[2].x - eyeMidX) / (box.width / video.videoWidth);
+                const rawYaw = (keypoints[2].x - eyeMidX) / (box.width / video.videoWidth);
+                const previousYaw = smoothedYawRef.current;
+                const yaw = previousYaw == null ? rawYaw : previousYaw * (1 - YAW_SMOOTHING) + rawYaw * YAW_SMOOTHING;
+                smoothedYawRef.current = yaw;
                 const rawPitch = (keypoints[2].y - eyeMidY) / (box.height / video.videoHeight);
                 const previousPitch = smoothedPitchRef.current;
-                const pitch = previousPitch == null ? rawPitch : previousPitch * 0.65 + rawPitch * 0.35;
+                const pitch = previousPitch == null ? rawPitch : previousPitch * 0.5 + rawPitch * 0.5;
                 smoothedPitchRef.current = pitch;
                 if (poseStartPitchRef.current == null) {
                   poseStartPitchRef.current = pitch;
@@ -340,7 +355,7 @@ export default function CameraView({ studentCode, studentName, onSuccess }) {
                   // Video preview is mirrored, so yaw sign is inverted relative to user-facing directions.
                 } else if (pose === 'left') {
                   if (yaw > LEFT_RIGHT_YAW_MAX_THRESHOLD) {
-                    nextMessage = 'Too far left. Turn slightly left only';
+                    nextMessage = 'Too far. Turn back a little to the left';
                   } else if (yaw > LEFT_RIGHT_YAW_MIN_THRESHOLD) {
                     nextPassing = true;
                   } else {
@@ -348,7 +363,7 @@ export default function CameraView({ studentCode, studentName, onSuccess }) {
                   }
                 } else if (pose === 'right') {
                   if (yaw < -LEFT_RIGHT_YAW_MAX_THRESHOLD) {
-                    nextMessage = 'Too far right. Turn slightly right only';
+                    nextMessage = 'Too far. Turn back a little to the right';
                   } else if (yaw < -LEFT_RIGHT_YAW_MIN_THRESHOLD) {
                     nextPassing = true;
                   } else {
@@ -360,7 +375,7 @@ export default function CameraView({ studentCode, studentName, onSuccess }) {
                   if (pitchDelta > -UP_DOWN_PITCH_MIN_DELTA) {
                     nextMessage = poseMessages[pose];
                   } else if (pitchDelta < -UP_DOWN_PITCH_MAX_DELTA) {
-                    nextMessage = 'Too far up. Tilt slightly up only';
+                    nextMessage = 'Too far. Tilt back down a little';
                   } else {
                     nextPassing = true;
                   }
@@ -370,7 +385,7 @@ export default function CameraView({ studentCode, studentName, onSuccess }) {
                   if (pitchDelta < UP_DOWN_PITCH_MIN_DELTA) {
                     nextMessage = poseMessages[pose];
                   } else if (pitchDelta > UP_DOWN_PITCH_MAX_DELTA) {
-                    nextMessage = 'Too far down. Tilt slightly down only';
+                    nextMessage = 'Too far. Tilt back up a little';
                   } else {
                     nextPassing = true;
                   }
@@ -394,11 +409,12 @@ export default function CameraView({ studentCode, studentName, onSuccess }) {
 
       if (nextPassing) {
         steadyTimerRef.current += delta;
-      } else {
+        lastPassingTimeRef.current = now;
+      } else if (now - lastPassingTimeRef.current > STEADY_GRACE_MS) {
         steadyTimerRef.current = 0;
       }
 
-      if (primary && nextPassing && steadyTimerRef.current >= 1500) {
+      if (primary && nextPassing && steadyTimerRef.current >= STEADY_HOLD_MS) {
         const blob = await capturePose(video, primary.boundingBox);
         capturedBlobsRef.current[poseIndex] = blob;
         const previewUrl = URL.createObjectURL(blob);
