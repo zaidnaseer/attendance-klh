@@ -185,3 +185,24 @@ export function setStudentAttendance(facultyCode, courseId, sessionId, studentId
     { method: 'PUT', body: JSON.stringify({ present }) },
   );
 }
+
+export function setCourseGestureRequired(facultyCode, courseId, required) {
+  return request(`/api/faculty/${encodeURIComponent(facultyCode)}/courses/${encodeURIComponent(courseId)}/gesture-required`, {
+    method: 'PUT',
+    body: JSON.stringify({ required }),
+  });
+}
+
+export function requestGestureChallenge(payload) {
+  return request('/api/gesture/challenge', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function verifyGestureTrace(payload) {
+  return request('/api/gesture/verify', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
