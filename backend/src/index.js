@@ -13,6 +13,7 @@ const facultyRouter = require('./routes/faculty');
 const studentDashboardRouter = require('./routes/studentDashboard');
 const qrRouter = require('./routes/qr');
 const gpsRouter = require('./routes/gps');
+const gestureRouter = require('./routes/gesture');
 const qrService = require('./services/qrService');
 const { migrate } = require('./db/migrate');
 
@@ -62,6 +63,7 @@ app.use('/api/faculty', facultyRouter);
 app.use('/api/student', studentDashboardRouter);
 app.use('/api/qr', qrRouter);
 app.use('/api/gps', gpsRouter);
+app.use('/api/gesture', gestureRouter);
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
